@@ -1,6 +1,6 @@
 """
 Inspector de Elementos UI para Windows Desktop
-Versão 1 - Com detecção de janelas de destino e retry inteligente
+Versão 2 - Com suporte para elemento âncora e clique relativo
 """
 import time
 import threading
@@ -22,8 +22,8 @@ class ElementInspector:
     """
     Inspector principal para captura de elementos UI
     
-    Implementa captura robusta com retry inteligente e detecção
-    de elementos que podem abrir janelas.
+    Implementa captura robusta com retry inteligente, detecção
+    de elementos que podem abrir janelas e clique relativo com âncora.
     """
     
     def __init__(self):
@@ -32,10 +32,27 @@ class ElementInspector:
         self.is_capturing = False
         self.captured_element = None
         self.mouse_hook = None
+        self.anchor_element = None  # Elemento âncora para clique relativo
         
-    def start_capture_mode(self, element_name):
+    def start_capture_mode(self, element_name, capture_type="element"):
         """
         Inicia o modo de captura de elementos
+        
+        Args:
+            element_name: Nome para identificar o elemento
+            capture_type: Tipo de captura ("element" ou "anchor_relative")
+            
+        Returns:
+            dict: Dados do elemento capturado ou None se cancelado
+        """
+        if capture_type == "anchor_relative":
+            return self._capture_anchor_and_relative_click(element_name)
+        else:
+            return self._capture_single_element(element_name)
+    
+    def _capture_single_element(self, element_name):
+        """
+        Captura um único elemento (modo tradicional)
         
         Args:
             element_name: Nome para identificar o elemento
@@ -78,6 +95,288 @@ class ElementInspector:
                 return None
         
         return None
+    
+    def _capture_anchor_and_relative_click(self, element_name):
+        """
+        Captura elemento âncora e ponto de clique relativo
+        
+        Args:
+            element_name: Nome para identificar o conjunto âncora+clique
+            
+        Returns:
+            dict: Dados do elemento âncora e clique relativo
+        """
+        print_header("MODO DE CAPTURA COM ÂNCORA")
+        
+        # Passo 1: Capturar elemento âncora
+        print_info("PASSO 1: Capturar Elemento Âncora")
+        print_warning("CTRL + SHIFT + Click no elemento âncora | ESC para cancelar")
+        
+        self.is_capturing = True
+        self.anchor_element = None
+        self.last_click_time = 0
+        
+        while self.is_capturing:
+            try:
+                time.sleep(0.05)
+                
+                # Verifica ESC
+                if win32api.GetAsyncKeyState(win32con.VK_ESCAPE) & 0x8000:
+                    print_warning("Captura cancelada pelo usuário")
+                    self.is_capturing = False
+                    return None
+                
+                # Verifica CTRL + SHIFT + Click
+                ctrl_pressed = win32api.GetAsyncKeyState(win32con.VK_CONTROL) & 0x8000
+                shift_pressed = win32api.GetAsyncKeyState(win32con.VK_SHIFT) & 0x8000
+                click_pressed = win32api.GetAsyncKeyState(win32con.VK_LBUTTON) & 0x8000
+                
+                if ctrl_pressed and shift_pressed and click_pressed:
+                    current_time = time.time()
+                    if current_time - self.last_click_time > 0.3:
+                        self.last_click_time = current_time
+                        
+                        # Captura elemento âncora
+                        cursor_pos = win32gui.GetCursorPos()
+                        anchor_element = self._capture_element_at_position(cursor_pos)
+                        
+                        if anchor_element:
+                            self.anchor_element = anchor_element
+                            anchor_name = anchor_element.get('name') or anchor_element.get('class_name') or 'Elemento'
+                            print_success(f"Elemento âncora capturado: {anchor_name}")
+                            self.is_capturing = False
+                        else:
+                            print_error("Falha ao capturar elemento âncora")
+                
+            except KeyboardInterrupt:
+                print_warning("Captura interrompida")
+                return None
+        
+        if not self.anchor_element:
+            return None
+        
+        # Passo 2: Capturar ponto de clique relativo
+        print()
+        print_info("PASSO 2: Marcar Ponto de Clique Relativo")
+        print_warning("CTRL + Click onde deseja clicar (relativo ao âncora) | ESC para cancelar")
+        
+        self.is_capturing = True
+        relative_click_pos = None
+        
+        while self.is_capturing:
+            try:
+                time.sleep(0.05)
+                
+                # Verifica ESC
+                if win32api.GetAsyncKeyState(win32con.VK_ESCAPE) & 0x8000:
+                    print_warning("Captura de clique relativo cancelada")
+                    self.is_capturing = False
+                    return None
+                
+                # Verifica CTRL + Click (sem SHIFT desta vez)
+                ctrl_pressed = win32api.GetAsyncKeyState(win32con.VK_CONTROL) & 0x8000
+                shift_pressed = win32api.GetAsyncKeyState(win32con.VK_SHIFT) & 0x8000
+                click_pressed = win32api.GetAsyncKeyState(win32con.VK_LBUTTON) & 0x8000
+                
+                if ctrl_pressed and not shift_pressed and click_pressed:
+                    current_time = time.time()
+                    if current_time - self.last_click_time > 0.3:
+                        self.last_click_time = current_time
+                        
+                        # Captura posição do clique
+                        relative_click_pos = win32gui.GetCursorPos()
+                        print_success(f"Ponto de clique capturado: {relative_click_pos}")
+                        self.is_capturing = False
+                
+            except KeyboardInterrupt:
+                print_warning("Captura interrompida")
+                return None
+        
+        if not relative_click_pos:
+            return None
+        
+        # Processa e salva dados do conjunto âncora + clique relativo
+        return self._process_anchor_relative_capture(
+            self.anchor_element, 
+            relative_click_pos, 
+            element_name
+        )
+    
+    def _capture_element_at_position(self, position):
+        """
+        Captura elemento em uma posição específica
+        
+        Args:
+            position: Tupla (x, y) com a posição
+            
+        Returns:
+            dict: Dados do elemento ou None
+        """
+        try:
+            element = auto.ControlFromPoint(position[0], position[1])
+            
+            if not element:
+                element = auto.GetCursorControl()
+            
+            if not element:
+                return None
+            
+            # Valida elemento
+            try:
+                _ = element.ControlTypeName
+                _ = element.BoundingRectangle
+                
+                if element.ClassName == '#32769' or element.Name == 'Desktop':
+                    return None
+            except:
+                return None
+            
+            # Extrai dados do elemento
+            return self._extract_element_properties(element)
+            
+        except Exception as e:
+            print_error(f"Erro ao capturar elemento: {str(e)}")
+            return None
+    
+    def _process_anchor_relative_capture(self, anchor_data, click_position, element_name):
+        """
+        Processa dados de captura âncora + clique relativo
+        
+        Args:
+            anchor_data: Dados do elemento âncora
+            click_position: Posição (x, y) do clique
+            element_name: Nome para identificar o conjunto
+            
+        Returns:
+            dict: Dados processados
+        """
+        try:
+            print_info("Processando captura com âncora e clique relativo...")
+            
+            # Obtém informações da janela do âncora
+            window_info = anchor_data.get('window_info', {})
+            if not window_info or window_info.get('error'):
+                print_error("Não foi possível obter informações da janela do âncora")
+                return None
+            
+            # Calcula posições relativas
+            anchor_rect = anchor_data.get('bounding_rectangle', {})
+            window_rect = window_info.get('window_rectangle', {})
+            
+            if not anchor_rect or not window_rect:
+                print_error("Não foi possível obter geometria do âncora ou janela")
+                return None
+            
+            # Calcula offset relativo ao âncora
+            anchor_relative_x = click_position[0] - anchor_rect['left']
+            anchor_relative_y = click_position[1] - anchor_rect['top']
+            
+            # Calcula offset relativo à janela
+            window_relative_x = click_position[0] - window_rect['left']
+            window_relative_y = click_position[1] - window_rect['top']
+            
+            # Calcula percentuais relativos ao tamanho da janela
+            window_width = window_rect['width']
+            window_height = window_rect['height']
+            
+            window_percent_x = (window_relative_x / window_width) * 100 if window_width > 0 else 0
+            window_percent_y = (window_relative_y / window_height) * 100 if window_height > 0 else 0
+            
+            # Monta estrutura de dados
+            capture_data = {
+                'capture_type': 'anchor_relative',
+                'anchor_element': anchor_data,
+                'relative_click': {
+                    'absolute_position': {
+                        'x': click_position[0],
+                        'y': click_position[1]
+                    },
+                    'anchor_relative': {
+                        'offset_x': anchor_relative_x,
+                        'offset_y': anchor_relative_y,
+                        'description': f"Clique a {anchor_relative_x}px à direita e {anchor_relative_y}px abaixo do âncora"
+                    },
+                    'window_relative': {
+                        'offset_x': window_relative_x,
+                        'offset_y': window_relative_y,
+                        'percent_x': round(window_percent_x, 2),
+                        'percent_y': round(window_percent_y, 2),
+                        'description': f"Clique a {window_percent_x:.1f}% da largura e {window_percent_y:.1f}% da altura da janela"
+                    }
+                },
+                'window_context': {
+                    'width': window_width,
+                    'height': window_height,
+                    'title': window_info.get('title', ''),
+                    'class_name': window_info.get('class_name', '')
+                }
+            }
+            
+            # Gera seletores XML especiais para clique relativo
+            print_info("Gerando seletores XML para clique relativo...")
+            xml_selectors = self.xml_generator.generate_relative_click_selectors(
+                anchor_data, 
+                capture_data['relative_click']
+            )
+            capture_data['xml_selectors'] = xml_selectors
+            
+            # Salva dados
+            folder_path = create_element_folder(element_name)
+            file_path = save_element_data(folder_path, capture_data)
+            
+            print_success(f"Captura âncora+clique salva em: {folder_path}")
+            self._display_anchor_relative_summary(capture_data)
+            
+            return {
+                'folder_path': folder_path,
+                'file_path': file_path,
+                'element_data': capture_data
+            }
+            
+        except Exception as e:
+            print_error(f"Erro ao processar captura âncora+clique: {str(e)}")
+            return None
+    
+    def _display_anchor_relative_summary(self, capture_data):
+        """
+        Exibe resumo da captura âncora + clique relativo
+        
+        Args:
+            capture_data: Dados da captura
+        """
+        print_header("RESUMO DA CAPTURA ÂNCORA + CLIQUE RELATIVO")
+        
+        # Informações do âncora
+        anchor = capture_data.get('anchor_element', {})
+        print_colored("ELEMENTO ÂNCORA:", Fore.YELLOW)
+        print_colored(f"  AutomationId: {anchor.get('automation_id', 'N/A')}", Fore.CYAN)
+        print_colored(f"  Name: {anchor.get('name', 'N/A')}", Fore.CYAN)
+        print_colored(f"  ControlType: {anchor.get('control_type', 'N/A')}", Fore.CYAN)
+        print()
+        
+        # Informações do clique relativo
+        relative = capture_data.get('relative_click', {})
+        print_colored("CLIQUE RELATIVO:", Fore.YELLOW)
+        
+        anchor_rel = relative.get('anchor_relative', {})
+        print_colored(f"  Offset do âncora: ({anchor_rel.get('offset_x')}px, {anchor_rel.get('offset_y')}px)", Fore.GREEN)
+        
+        window_rel = relative.get('window_relative', {})
+        print_colored(f"  Posição na janela: {window_rel.get('percent_x')}% x {window_rel.get('percent_y')}%", Fore.GREEN)
+        print()
+        
+        # Contexto da janela
+        window_ctx = capture_data.get('window_context', {})
+        print_colored("CONTEXTO DA JANELA:", Fore.YELLOW)
+        print_colored(f"  Título: {window_ctx.get('title', 'N/A')}", Fore.WHITE)
+        print_colored(f"  Tamanho: {window_ctx.get('width')} x {window_ctx.get('height')} pixels", Fore.WHITE)
+        
+        # Primeiro seletor
+        selectors = capture_data.get('xml_selectors', [])
+        if selectors:
+            print()
+            print_colored("SELETOR PRINCIPAL:", Fore.MAGENTA)
+            print_colored(selectors[0], Fore.WHITE)
     
     def _capture_element_at_cursor(self, element_name):
         """
@@ -188,6 +487,7 @@ class ElementInspector:
             
             # Extrai informações básicas
             element_data = self._extract_element_properties(element)
+            element_data['capture_type'] = 'single_element'  # Marca tipo de captura
             
             # Gera seletores XML
             print_info("Gerando seletores XML robustos...")
@@ -274,7 +574,10 @@ class ElementInspector:
                 
                 # Hierarquia
                 'parent_info': self._get_parent_info(element),
-                'children_count': self._get_children_count(element)
+                'children_count': self._get_children_count(element),
+                
+                # Informações da janela já extraídas aqui
+                'window_info': self._extract_window_info(element)
             }
             
         except Exception as e:

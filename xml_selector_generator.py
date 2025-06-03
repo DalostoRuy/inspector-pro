@@ -1,6 +1,6 @@
 """
 Gerador de Seletores XML robustos para elementos UI
-Versão 1 - Com múltiplas estratégias de seleção e melhorias de robustez
+Versão 2 - Com múltiplas estratégias de seleção e suporte para clique relativo
 """
 import xml.etree.ElementTree as ET
 import uiautomation as auto
@@ -11,6 +11,9 @@ class XMLSelectorGenerator:
     
     Esta classe implementa múltiplas estratégias de seleção para garantir
     que elementos possam ser encontrados mesmo quando a UI muda.
+    
+    Suporta também geração de seletores para clique relativo, permitindo
+    clicar em posições relativas a elementos âncora.
     """
     
     def __init__(self):
@@ -537,3 +540,102 @@ class XMLSelectorGenerator:
     <Element coordinateX="{center_x}" coordinateY="{center_y}" tolerance="5" />
     <!-- Região: x={rect['left']}, y={rect['top']}, w={rect['width']}, h={rect['height']} -->
 </Selector>"""
+    
+    def generate_relative_click_selectors(self, anchor_element_info, relative_click_info):
+        """
+        Gera seletores XML para clique relativo a um elemento âncora
+        
+        Cria múltiplos seletores que permitem clicar em uma posição
+        relativa a um elemento âncora, independente de resolução.
+        
+        Args:
+            anchor_element_info: Informações do elemento âncora
+            relative_click_info: Informações do clique relativo
+            
+        Returns:
+            list: Lista de seletores XML para clique relativo
+        """
+        selectors = []
+        
+        # Extrai informações necessárias
+        anchor_id = anchor_element_info.get('automation_id')
+        anchor_name = anchor_element_info.get('name')
+        anchor_class = anchor_element_info.get('class_name')
+        anchor_type = anchor_element_info.get('control_type')
+        window_info = anchor_element_info.get('window_info', {})
+        
+        # Informações do clique relativo
+        anchor_offset = relative_click_info.get('anchor_relative', {})
+        window_offset = relative_click_info.get('window_relative', {})
+        
+        # Seletor 1: Clique relativo ao âncora usando AutomationId (MAIS ROBUSTO)
+        if anchor_id and anchor_offset:
+            selector = f"""
+<!-- Seletor de Clique Relativo por AutomationId do Âncora (MAIS ROBUSTO) -->
+<Selector>
+    <Window title="{window_info.get('title', '*')}" />
+    <AnchorElement automationId="{anchor_id}" controlType="{anchor_type}" />
+    <RelativeClick offsetX="{anchor_offset.get('offset_x', 0)}" offsetY="{anchor_offset.get('offset_y', 0)}" />
+    <!-- {anchor_offset.get('description', '')} -->
+</Selector>"""
+            selectors.append(selector)
+        
+        # Seletor 2: Clique relativo usando percentual da janela (INDEPENDENTE DE RESOLUÇÃO)
+        if window_offset and window_info.get('title'):
+            selector = f"""
+<!-- Seletor de Clique Relativo por Percentual da Janela (INDEPENDENTE DE RESOLUÇÃO) -->
+<Selector>
+    <Window title="{window_info.get('title')}" />
+    <WindowRelativeClick percentX="{window_offset.get('percent_x', 0)}" percentY="{window_offset.get('percent_y', 0)}" />
+    <!-- {window_offset.get('description', '')} -->
+</Selector>"""
+            selectors.append(selector)
+        
+        # Seletor 3: Clique relativo ao âncora usando Name
+        if anchor_name and anchor_offset:
+            selector = f"""
+<!-- Seletor de Clique Relativo por Name do Âncora -->
+<Selector>
+    <Window title="{window_info.get('title', '*')}" />
+    <AnchorElement name="{anchor_name}" controlType="{anchor_type}" />
+    <RelativeClick offsetX="{anchor_offset.get('offset_x', 0)}" offsetY="{anchor_offset.get('offset_y', 0)}" />
+</Selector>"""
+            selectors.append(selector)
+        
+        # Seletor 4: Clique com offset da janela em pixels (para casos específicos)
+        if window_offset:
+            selector = f"""
+<!-- Seletor de Clique por Offset Absoluto da Janela -->
+<Selector>
+    <Window title="{window_info.get('title', '*')}" />
+    <WindowClick offsetX="{window_offset.get('offset_x', 0)}" offsetY="{window_offset.get('offset_y', 0)}" />
+    <!-- Posição fixa em pixels desde o canto superior esquerdo da janela -->
+</Selector>"""
+            selectors.append(selector)
+        
+        # Seletor 5: Combinação hierárquica com âncora
+        if anchor_id and anchor_offset and anchor_element_info.get('parent_info'):
+            parent_info = anchor_element_info.get('parent_info', {})
+            selector = f"""
+<!-- Seletor de Clique Relativo com Contexto Hierárquico -->
+<Selector>
+    <Window title="{window_info.get('title', '*')}" />
+    <Element automationId="{parent_info.get('automation_id', '*')}" controlType="{parent_info.get('control_type', '*')}" />
+    <AnchorElement automationId="{anchor_id}" />
+    <RelativeClick offsetX="{anchor_offset.get('offset_x', 0)}" offsetY="{anchor_offset.get('offset_y', 0)}" />
+</Selector>"""
+            selectors.append(selector)
+        
+        # Seletor 6: Fallback com coordenadas absolutas
+        absolute_pos = relative_click_info.get('absolute_position', {})
+        if absolute_pos:
+            selector = f"""
+<!-- Seletor de Emergência com Coordenadas Absolutas (MENOS ROBUSTO) -->
+<Selector>
+    <Window title="{window_info.get('title', '*')}" />
+    <AbsoluteClick x="{absolute_pos.get('x', 0)}" y="{absolute_pos.get('y', 0)}" />
+    <!-- Coordenadas absolutas da tela - usar apenas como último recurso -->
+</Selector>"""
+            selectors.append(selector)
+        
+        return selectors

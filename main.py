@@ -1,6 +1,6 @@
 """
 UI Inspector - Inspetor de Elementos para Programas Desktop Windows
-Versão 1 - Com exibição consistente de detalhes e melhorias de UX
+Versão 2 - Com suporte para captura de elemento âncora + clique relativo
 
 Desenvolvido para automação RPA com UIA3
 
@@ -9,6 +9,7 @@ Uso:
 
 Controles durante captura:
     CTRL + Click - Capturar elemento sob o cursor
+    CTRL + SHIFT + Click - Capturar elemento âncora (para clique relativo)
     ESC - Cancelar captura
 """
 import sys
@@ -52,10 +53,11 @@ class UIInspectorApp:
         """
         print_header("MENU PRINCIPAL")
         print_colored("1. Capturar Elemento", Fore.WHITE)
-        print_colored("2. Listar Elementos Capturados", Fore.WHITE)
-        print_colored("3. Abrir Pasta de Elementos", Fore.WHITE)
-        print_colored("4. Ajuda", Fore.WHITE)
-        print_colored("5. Sair", Fore.WHITE)
+        print_colored("2. Capturar Elemento Âncora + Clique Relativo", Fore.WHITE)
+        print_colored("3. Listar Elementos Capturados", Fore.WHITE)
+        print_colored("4. Abrir Pasta de Elementos", Fore.WHITE)
+        print_colored("5. Ajuda", Fore.WHITE)
+        print_colored("6. Sair", Fore.WHITE)
         print()
     
     def get_user_choice(self):
@@ -65,13 +67,13 @@ class UIInspectorApp:
         Trata interrupções do teclado graciosamente
         
         Returns:
-            str: Escolha do usuário ou "5" para sair
+            str: Escolha do usuário ou "6" para sair
         """
         try:
-            choice = input(f"{Fore.CYAN}Escolha uma opção (1-5): {Style.RESET_ALL}").strip()
+            choice = input(f"{Fore.CYAN}Escolha uma opção (1-6): {Style.RESET_ALL}").strip()
             return choice
         except KeyboardInterrupt:
-            return "5"
+            return "6"
         except:
             return ""
     
@@ -104,6 +106,54 @@ class UIInspectorApp:
         if result:
             print()
             print_success("Elemento capturado com sucesso!")
+            
+            # Oferece visualizar detalhes
+            view_details = input(f"{Fore.CYAN}Deseja visualizar os detalhes? (s/n): {Style.RESET_ALL}").strip().lower()
+            
+            if view_details in ['s', 'sim', 'y', 'yes']:
+                self.show_element_details(result['element_data'])
+        else:
+            print_warning("Captura cancelada ou falhou")
+        
+        wait_for_keypress()
+    
+    def capture_anchor_relative_workflow(self):
+        """
+        Fluxo completo de captura de elemento âncora + clique relativo
+        
+        Guia o usuário através do processo de captura em duas etapas:
+        1. Captura do elemento âncora
+        2. Marcação do ponto de clique relativo
+        """
+        print_header("CAPTURA DE ELEMENTO ÂNCORA + CLIQUE RELATIVO")
+        
+        # Explica o conceito
+        print_colored("Este modo permite capturar um elemento âncora e definir", Fore.CYAN)
+        print_colored("um ponto de clique relativo a ele. Isso garante que o", Fore.CYAN)
+        print_colored("clique funcione independente da resolução ou tamanho da janela.", Fore.CYAN)
+        print()
+        
+        # Solicita nome do conjunto
+        element_name = input(f"{Fore.CYAN}Digite um nome para o conjunto âncora+clique: {Style.RESET_ALL}").strip()
+        
+        if not element_name:
+            print_error("Nome é obrigatório")
+            wait_for_keypress()
+            return
+        
+        print()
+        print_warning("INSTRUÇÕES:")
+        print_colored("Passo 1: CTRL + SHIFT + Click no elemento âncora", Fore.WHITE)
+        print_colored("Passo 2: CTRL + Click onde deseja clicar (relativo ao âncora)", Fore.WHITE)
+        print_colored("ESC para cancelar a qualquer momento", Fore.WHITE)
+        print()
+        
+        # Inicia captura com tipo anchor_relative
+        result = self.inspector.start_capture_mode(element_name, capture_type="anchor_relative")
+        
+        if result:
+            print()
+            print_success("Captura âncora+clique concluída com sucesso!")
             
             # Oferece visualizar detalhes
             view_details = input(f"{Fore.CYAN}Deseja visualizar os detalhes? (s/n): {Style.RESET_ALL}").strip().lower()
@@ -154,15 +204,24 @@ class UIInspectorApp:
                                 data = json.load(f)
                             
                             # Extrai informações para preview
-                            name = data.get('name', 'N/A')
-                            control_type = data.get('control_type', 'N/A')
+                            capture_type = data.get('capture_type', 'single_element')
                             captured_at = data.get('captured_at', 'N/A')
                             
                             # Formata timestamp para exibição
                             if captured_at != 'N/A':
                                 captured_at = captured_at[:19]  # Remove milissegundos
                             
-                            print_colored(f"    {name} ({control_type}) - {captured_at}", Fore.WHITE)
+                            if capture_type == 'anchor_relative':
+                                # Para captura âncora+clique
+                                anchor = data.get('anchor_element', {})
+                                anchor_name = anchor.get('name', 'N/A')
+                                anchor_type = anchor.get('control_type', 'N/A')
+                                print_colored(f"    [ÂNCORA+CLIQUE] {anchor_name} ({anchor_type}) - {captured_at}", Fore.MAGENTA)
+                            else:
+                                # Para captura simples
+                                name = data.get('name', 'N/A')
+                                control_type = data.get('control_type', 'N/A')
+                                print_colored(f"    {name} ({control_type}) - {captured_at}", Fore.WHITE)
                     except Exception:
                         print_colored(f"    Erro ao ler preview", Fore.RED)
                     print()
@@ -429,6 +488,69 @@ class UIInspectorApp:
             print_colored("CAPTURA:", Fore.YELLOW)
             print_colored(f"  Data/Hora: {captured_at}", Fore.WHITE)
             print()
+        
+        # INFORMAÇÕES DE CLIQUE RELATIVO (se for captura âncora+clique)
+        if safe_get(element_data, 'capture_type') == 'anchor_relative':
+            print_colored("=" * 60, Fore.MAGENTA)
+            print_colored("INFORMAÇÕES DE CLIQUE RELATIVO", Fore.YELLOW)
+            print_colored("=" * 60, Fore.MAGENTA)
+            
+            # Informações do elemento âncora
+            anchor = element_data.get('anchor_element', {})
+            if isinstance(anchor, dict):
+                print_colored("\nELEMENTO ÂNCORA:", Fore.YELLOW)
+                print_colored(f"  AutomationId: {safe_get(anchor, 'automation_id')}", Fore.CYAN)
+                print_colored(f"  Name: {safe_get(anchor, 'name')}", Fore.CYAN)
+                print_colored(f"  ClassName: {safe_get(anchor, 'class_name')}", Fore.CYAN)
+                print_colored(f"  ControlType: {safe_get(anchor, 'control_type')}", Fore.CYAN)
+                
+                # Geometria do âncora
+                anchor_rect = anchor.get('bounding_rectangle', {})
+                if isinstance(anchor_rect, dict) and anchor_rect:
+                    print_colored(f"  Posição: ({safe_get(anchor_rect, 'left')}, {safe_get(anchor_rect, 'top')})", Fore.WHITE)
+                    print_colored(f"  Tamanho: {safe_get(anchor_rect, 'width')} x {safe_get(anchor_rect, 'height')}", Fore.WHITE)
+            
+            # Informações do clique relativo
+            relative_click = element_data.get('relative_click', {})
+            if isinstance(relative_click, dict):
+                print_colored("\nCLIQUE RELATIVO:", Fore.YELLOW)
+                
+                # Posição absoluta
+                abs_pos = relative_click.get('absolute_position', {})
+                if isinstance(abs_pos, dict):
+                    print_colored(f"  Posição absoluta: ({safe_get(abs_pos, 'x')}, {safe_get(abs_pos, 'y')})", Fore.WHITE)
+                
+                # Offset do âncora
+                anchor_rel = relative_click.get('anchor_relative', {})
+                if isinstance(anchor_rel, dict):
+                    print_colored(f"\n  Relativo ao âncora:", Fore.GREEN)
+                    print_colored(f"    Offset X: {safe_get(anchor_rel, 'offset_x')}px", Fore.WHITE)
+                    print_colored(f"    Offset Y: {safe_get(anchor_rel, 'offset_y')}px", Fore.WHITE)
+                    desc = safe_get(anchor_rel, 'description')
+                    if desc and desc != 'N/A':
+                        print_colored(f"    Descrição: {desc}", Fore.WHITE)
+                
+                # Offset da janela
+                window_rel = relative_click.get('window_relative', {})
+                if isinstance(window_rel, dict):
+                    print_colored(f"\n  Relativo à janela:", Fore.GREEN)
+                    print_colored(f"    Offset X: {safe_get(window_rel, 'offset_x')}px", Fore.WHITE)
+                    print_colored(f"    Offset Y: {safe_get(window_rel, 'offset_y')}px", Fore.WHITE)
+                    print_colored(f"    Percentual X: {safe_get(window_rel, 'percent_x')}%", Fore.WHITE)
+                    print_colored(f"    Percentual Y: {safe_get(window_rel, 'percent_y')}%", Fore.WHITE)
+                    desc = safe_get(window_rel, 'description')
+                    if desc and desc != 'N/A':
+                        print_colored(f"    Descrição: {desc}", Fore.WHITE)
+            
+            # Contexto da janela
+            window_ctx = element_data.get('window_context', {})
+            if isinstance(window_ctx, dict):
+                print_colored("\nCONTEXTO DA JANELA:", Fore.YELLOW)
+                print_colored(f"  Título: {safe_get(window_ctx, 'title')}", Fore.WHITE)
+                print_colored(f"  Classe: {safe_get(window_ctx, 'class_name')}", Fore.WHITE)
+                print_colored(f"  Tamanho: {safe_get(window_ctx, 'width')} x {safe_get(window_ctx, 'height')} pixels", Fore.WHITE)
+            
+            print()  # Linha em branco após seção de clique relativo
     
     def show_saved_element_details(self, element_folder):
         """
@@ -500,51 +622,71 @@ class UIInspectorApp:
         print_colored("  Windows, projetada para automação RPA com UIA3.", Fore.WHITE)
         print()
         
+        print_colored("MODOS DE CAPTURA:", Fore.YELLOW)
+        print_colored("  1. CAPTURA SIMPLES:", Fore.CYAN)
+        print_colored("     • Captura informações de um único elemento", Fore.WHITE)
+        print_colored("     • Use: CTRL + Click no elemento", Fore.WHITE)
+        print_colored("  2. CAPTURA ÂNCORA + CLIQUE RELATIVO:", Fore.CYAN)
+        print_colored("     • Captura elemento âncora e define ponto de clique relativo", Fore.WHITE)
+        print_colored("     • Garante cliques precisos independente de resolução", Fore.WHITE)
+        print_colored("     • Passo 1: CTRL + SHIFT + Click no elemento âncora", Fore.WHITE)
+        print_colored("     • Passo 2: CTRL + Click onde deseja clicar", Fore.WHITE)
+        print()
+        
         print_colored("COMO USAR:", Fore.YELLOW)
-        print_colored("  1. Escolha 'Capturar Elemento' no menu principal", Fore.WHITE)
-        print_colored("  2. Digite um nome descritivo para identificar o elemento", Fore.WHITE)
-        print_colored("  3. Posicione o cursor sobre o elemento desejado", Fore.WHITE)
-        print_colored("  4. Pressione CTRL + Click para capturar", Fore.WHITE)
-        print_colored("  5. Visualize os detalhes capturados", Fore.WHITE)
+        print_colored("  1. Escolha o modo de captura desejado no menu", Fore.WHITE)
+        print_colored("  2. Digite um nome descritivo para identificar", Fore.WHITE)
+        print_colored("  3. Siga as instruções na tela para capturar", Fore.WHITE)
+        print_colored("  4. Visualize os detalhes capturados", Fore.WHITE)
         print()
         
         print_colored("LISTAGEM DE ELEMENTOS:", Fore.YELLOW)
         print_colored("  • Lista todos os elementos capturados com preview", Fore.WHITE)
         print_colored("  • Digite o número para ver detalhes COMPLETOS", Fore.WHITE)
         print_colored("  • Digite 'todos' para ver TODOS em sequência", Fore.WHITE)
-        print_colored("  • Os detalhes incluem todas as propriedades do elemento", Fore.WHITE)
+        print_colored("  • Mostra tanto capturas simples quanto âncora+clique", Fore.WHITE)
         print()
         
         print_colored("INFORMAÇÕES CAPTURADAS:", Fore.YELLOW)
-        print_colored("  • Identificação: AutomationId, Name, ClassName", Fore.WHITE)
-        print_colored("  • Tipo: ControlType, LocalizedControlType", Fore.WHITE)
-        print_colored("  • Framework: FrameworkId, FrameworkType detectado", Fore.WHITE)
-        print_colored("  • Processo: ProcessId, nome, executável, memória", Fore.WHITE)
-        print_colored("  • Janela: Título, classe, se é modal/topmost", Fore.WHITE)
-        print_colored("  • Geometria: Posição e tamanho exatos", Fore.WHITE)
-        print_colored("  • Estados: Habilitado, visível, focalizável", Fore.WHITE)
-        print_colored("  • Hierarquia: Informações do pai e número de filhos", Fore.WHITE)
-        print_colored("  • Padrões: Todos os padrões UIA suportados", Fore.WHITE)
-        print_colored("  • Seletores: Múltiplos seletores XML robustos", Fore.WHITE)
-        print_colored("  • Detecção: Identifica elementos que abrem janelas", Fore.WHITE)
+        print_colored("  CAPTURA SIMPLES:", Fore.CYAN)
+        print_colored("    • Identificação: AutomationId, Name, ClassName", Fore.WHITE)
+        print_colored("    • Tipo: ControlType, LocalizedControlType", Fore.WHITE)
+        print_colored("    • Framework: FrameworkId, FrameworkType detectado", Fore.WHITE)
+        print_colored("    • Processo: ProcessId, nome, executável, memória", Fore.WHITE)
+        print_colored("    • Janela: Título, classe, se é modal/topmost", Fore.WHITE)
+        print_colored("    • Geometria: Posição e tamanho exatos", Fore.WHITE)
+        print_colored("    • Estados: Habilitado, visível, focalizável", Fore.WHITE)
+        print_colored("    • Hierarquia: Informações do pai e número de filhos", Fore.WHITE)
+        print_colored("    • Padrões: Todos os padrões UIA suportados", Fore.WHITE)
+        print_colored("    • Seletores: Múltiplos seletores XML robustos", Fore.WHITE)
+        print_colored("    • Detecção: Identifica elementos que abrem janelas", Fore.WHITE)
+        print_colored("  CAPTURA ÂNCORA+CLIQUE:", Fore.CYAN)
+        print_colored("    • Todas as informações do elemento âncora", Fore.WHITE)
+        print_colored("    • Offset em pixels do âncora", Fore.WHITE)
+        print_colored("    • Offset em pixels da janela", Fore.WHITE)
+        print_colored("    • Percentual da janela (independente de resolução)", Fore.WHITE)
+        print_colored("    • Contexto completo da janela", Fore.WHITE)
+        print_colored("    • Seletores XML especializados para clique relativo", Fore.WHITE)
         print()
         
         print_colored("CONTROLES DURANTE CAPTURA:", Fore.YELLOW)
-        print_colored("  CTRL + Click - Capturar elemento sob o cursor", Fore.GREEN)
-        print_colored("  ESC         - Cancelar captura a qualquer momento", Fore.GREEN)
+        print_colored("  CTRL + Click         - Capturar elemento/clique", Fore.GREEN)
+        print_colored("  CTRL + SHIFT + Click - Capturar elemento âncora", Fore.GREEN)
+        print_colored("  ESC                  - Cancelar captura", Fore.GREEN)
         print()
         
         print_colored("ARQUIVOS E PASTAS:", Fore.YELLOW)
         print_colored("  • Elementos salvos em: captured_elements/", Fore.WHITE)
         print_colored("  • Cada elemento em pasta própria com timestamp", Fore.WHITE)
         print_colored("  • Dados salvos em JSON com estrutura preservada", Fore.WHITE)
-        print_colored("  • Use opção 3 para abrir a pasta no explorador", Fore.WHITE)
+        print_colored("  • Use opção 4 para abrir a pasta no explorador", Fore.WHITE)
         print()
         
         print_colored("DICAS AVANÇADAS:", Fore.YELLOW)
         print_colored("  • O inspector faz até 3 tentativas de captura", Fore.WHITE)
         print_colored("  • Detecta automaticamente o framework usado", Fore.WHITE)
         print_colored("  • Gera múltiplos seletores por ordem de robustez", Fore.WHITE)
+        print_colored("  • Clique relativo funciona mesmo com janelas redimensionadas", Fore.WHITE)
         print_colored("  • Preserva estrutura complexa de dados no JSON", Fore.WHITE)
         print()
         
@@ -566,12 +708,14 @@ class UIInspectorApp:
                 if choice == "1":
                     self.capture_element_workflow()
                 elif choice == "2":
-                    self.list_captured_elements()
+                    self.capture_anchor_relative_workflow()
                 elif choice == "3":
-                    self.open_elements_folder()
+                    self.list_captured_elements()
                 elif choice == "4":
-                    self.show_help()
+                    self.open_elements_folder()
                 elif choice == "5":
+                    self.show_help()
+                elif choice == "6":
                     print_info("Encerrando UI Inspector...")
                     self.running = False
                 else:
