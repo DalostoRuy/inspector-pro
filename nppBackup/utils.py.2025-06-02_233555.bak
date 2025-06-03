@@ -1,0 +1,100 @@
+"""
+Utilitários para o UI Inspector
+"""
+import os
+import json
+import time
+import psutil
+from datetime import datetime
+from colorama import init, Fore, Style
+
+# Inicializa colorama para cores no terminal
+init(autoreset=True)
+
+def print_colored(text, color=Fore.WHITE):
+    """Imprime texto colorido no terminal"""
+    print(f"{color}{text}{Style.RESET_ALL}")
+
+def print_header(text):
+    """Imprime cabeçalho estilizado"""
+    print_colored("=" * 60, Fore.CYAN)
+    print_colored(f" {text} ", Fore.YELLOW)
+    print_colored("=" * 60, Fore.CYAN)
+
+def print_info(text):
+    """Imprime informação em azul"""
+    print_colored(f"[INFO] {text}", Fore.BLUE)
+
+def print_success(text):
+    """Imprime sucesso em verde"""
+    print_colored(f"[SUCCESS] {text}", Fore.GREEN)
+
+def print_warning(text):
+    """Imprime aviso em amarelo"""
+    print_colored(f"[WARNING] {text}", Fore.YELLOW)
+
+def print_error(text):
+    """Imprime erro em vermelho"""
+    print_colored(f"[ERROR] {text}", Fore.RED)
+
+def create_element_folder(element_name):
+    """Cria pasta para salvar dados do elemento capturado"""
+    base_folder = "captured_elements"
+    if not os.path.exists(base_folder):
+        os.makedirs(base_folder)
+    
+    # Sanitiza o nome do elemento para nome de pasta válido
+    safe_name = "".join(c for c in element_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+    safe_name = safe_name.replace(' ', '_')
+    
+    # Adiciona timestamp para evitar conflitos
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    folder_name = f"{safe_name}_{timestamp}"
+    
+    element_folder = os.path.join(base_folder, folder_name)
+    os.makedirs(element_folder, exist_ok=True)
+    
+    return element_folder
+
+def save_element_data(folder_path, element_data):
+    """Salva dados do elemento em JSON"""
+    file_path = os.path.join(folder_path, "element_data.json")
+    
+    # Converte dados para formato serializável
+    serializable_data = {}
+    for key, value in element_data.items():
+        if value is None:
+            serializable_data[key] = None
+        elif isinstance(value, (str, int, bool, float)):
+            serializable_data[key] = value
+        elif isinstance(value, list):
+            serializable_data[key] = [str(item) for item in value]
+        else:
+            serializable_data[key] = str(value)
+    
+    # Adiciona timestamp da captura
+    serializable_data['captured_at'] = datetime.now().isoformat()
+    
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(serializable_data, f, indent=2, ensure_ascii=False)
+    
+    return file_path
+
+def get_process_info(process_id):
+    """Obtém informações detalhadas do processo"""
+    try:
+        process = psutil.Process(process_id)
+        return {
+            'name': process.name(),
+            'exe': process.exe(),
+            'cmdline': ' '.join(process.cmdline()) if process.cmdline() else '',
+            'create_time': datetime.fromtimestamp(process.create_time()).isoformat(),
+            'memory_info': process.memory_info()._asdict()
+        }
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+        return {'name': 'Unknown', 'exe': 'Unknown', 'error': 'Process access denied or not found'}
+
+def wait_for_keypress(message="Pressione ENTER para continuar..."):
+    """Aguarda pressionar uma tecla"""
+    print_colored(message, Fore.CYAN)
+    input()

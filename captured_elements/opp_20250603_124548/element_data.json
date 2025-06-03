@@ -1,0 +1,107 @@
+{
+  "automation_id": "",
+  "name": "Plugins",
+  "class_name": "",
+  "control_type": "MenuItemControl",
+  "localized_control_type": "item de menu",
+  "framework_id": "",
+  "framework_type": "Unknown",
+  "process_id": 10620,
+  "runtime_id": [],
+  "is_enabled": true,
+  "is_visible": true,
+  "is_keyboard_focusable": true,
+  "has_keyboard_focus": true,
+  "is_content_element": true,
+  "is_control_element": true,
+  "bounding_rectangle": {
+    "left": -1279,
+    "top": 23,
+    "right": -1227,
+    "bottom": 42,
+    "width": 52,
+    "height": 19
+  },
+  "process_info": {
+    "name": "notepad++.exe",
+    "exe": "C:\\Program Files\\Notepad++\\notepad++.exe",
+    "cmdline": "C:\\Program Files\\Notepad++\\notepad++.exe",
+    "create_time": "2025-06-03T12:43:51.077705",
+    "memory_info": {
+      "rss": 49901568,
+      "vms": 40153088,
+      "num_page_faults": 14395,
+      "peak_wset": 49901568,
+      "wset": 49901568,
+      "peak_paged_pool": 503568,
+      "paged_pool": 484400,
+      "peak_nonpaged_pool": 48136,
+      "nonpaged_pool": 27912,
+      "pagefile": 40153088,
+      "peak_pagefile": 40161280,
+      "private": 40153088
+    }
+  },
+  "value": "Plugins",
+  "parent_info": {
+    "automation_id": "MenuBar",
+    "name": "Aplicativo",
+    "class_name": "",
+    "control_type": "MenuBarControl"
+  },
+  "children_count": 0,
+  "xml_selectors": [
+    "\n<!-- Seletor por Name + ControlType -->\n<Selector>\n    <Window title=\"C:\\Users\\Matheus\\Desktop\\ui_inspector\\main.py - Notepad++\" />\n    <Element name=\"Plugins\" controlType=\"MenuItemControl\" />\n</Selector>",
+    "\n<!-- Seletor Hierárquico Completo -->\n<Selector>\n        <Window title=\"C:\\Users\\Matheus\\Desktop\\ui_inspector\\main.py - Notepad++\" />\n    <Element name=\"Área de Trabalho 1\" controlType=\"PaneControl\" />\n    <Element name=\"C:\\Users\\Matheus\\Desktop\\ui_inspector\\main.py - Notepad++\" controlType=\"WindowControl\" />\n    <Element automationId=\"MenuBar\" controlType=\"MenuBarControl\" />\n    <Element name=\"Plugins\" controlType=\"MenuItemControl\" />\n</Selector>",
+    "\n<!-- Seletor por Nome Parcial -->\n<Selector>\n    <Element nameContains=\"Plugins\" controlType=\"MenuItemControl\" />\n</Selector>",
+    "\n<!-- Seletor de Emergência por Coordenadas (MENOS ROBUSTO) -->\n<Selector>\n    <Window title=\"C:\\Users\\Matheus\\Desktop\\ui_inspector\\main.py - Notepad++\" />\n    <Element coordinateX=\"-1253\" coordinateY=\"32\" tolerance=\"5\" />\n    <!-- Região: x=-1279, y=23, w=52, h=19 -->\n</Selector>"
+  ],
+  "window_info": {
+    "title": "C:\\Users\\Matheus\\Desktop\\ui_inspector\\main.py - Notepad++",
+    "class_name": "Notepad++",
+    "automation_id": "",
+    "process_id": 10620,
+    "is_modal": false,
+    "is_topmost": "<bound method TopLevel.IsTopmost of <WindowControl ClassName='Notepad++' AutomationId= Rect=(-1927,-7,7,1039)[1934x1046] Name='C:\\\\Users\\\\Matheus\\\\Desktop\\\\ui_inspector\\\\main.py - Notepad++' Handle=0x605E4(394724)>>",
+    "window_rectangle": {
+      "left": -1927,
+      "top": -7,
+      "right": 7,
+      "bottom": 1039,
+      "width": 1934,
+      "height": 1046
+    }
+  },
+  "target_window_detection": {
+    "likely_opens_window": true,
+    "control_type": "MenuItemControl",
+    "button_text": "Plugins",
+    "detection_hints": [
+      "Este elemento provavelmente abre uma janela quando clicado",
+      "Considere capturar a janela de destino separadamente",
+      "Use o nome da janela de destino no seletor quando automatizar",
+      "Para automação robusta, implemente espera pela janela aparecer"
+    ]
+  },
+  "supported_patterns": {
+    "InvokePattern": {
+      "supported": true
+    },
+    "ValuePattern": false,
+    "TextPattern": false,
+    "TogglePattern": false,
+    "SelectionPattern": false,
+    "SelectionItemPattern": false,
+    "ExpandCollapsePattern": {
+      "supported": true,
+      "expand_collapse_state": "1"
+    },
+    "ScrollPattern": false,
+    "GridPattern": false,
+    "TablePattern": false,
+    "WindowPattern": false,
+    "TransformPattern": false,
+    "RangeValuePattern": false
+  },
+  "captured_at": "2025-06-03T12:45:48.953439"
+}

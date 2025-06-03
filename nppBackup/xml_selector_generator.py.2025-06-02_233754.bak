@@ -1,0 +1,356 @@
+"""
+Gerador de Seletores XML robustos para elementos UI
+"""
+import xml.etree.ElementTree as ET
+import uiautomation as auto
+
+class XMLSelectorGenerator:
+    """Gera seletores XML estratégicos e robustos para elementos UI"""
+    
+    def __init__(self):
+        self.selector_strategies = [
+            self._strategy_automation_id,
+            self._strategy_name_and_type,
+            self._strategy_class_and_index,
+            self._strategy_hierarchical_path,
+            self._strategy_partial_attributes
+        ]
+    
+    def generate_robust_selector(self, element):
+        """
+        Gera múltiplos seletores XML em ordem de robustez/confiabilidade
+        Retorna lista de seletores do mais confiável para o menos confiável
+        """
+        selectors = []
+        
+        # Coleta informações do elemento e seus ancestrais
+        element_info = self._extract_element_info(element)
+        parent_chain = self._build_parent_chain(element)
+        
+        # Aplica cada estratégia de seleção
+        for strategy in self.selector_strategies:
+            try:
+                selector = strategy(element_info, parent_chain)
+                if selector and selector not in selectors:
+                    selectors.append(selector)
+            except Exception as e:
+                continue
+        
+        # Adiciona seletor de emergência (coordenadas + janela)
+        emergency_selector = self._strategy_emergency_fallback(element_info)
+        if emergency_selector:
+            selectors.append(emergency_selector)
+        
+        return selectors
+    
+    def _extract_element_info(self, element):
+        """Extrai todas as informações relevantes do elemento"""
+        try:
+            rect = getattr(element, 'BoundingRectangle', None)
+            
+            return {
+                'automation_id': getattr(element, 'AutomationId', '') or '',
+                'name': getattr(element, 'Name', '') or '',
+                'class_name': getattr(element, 'ClassName', '') or '',
+                'control_type': getattr(element, 'ControlTypeName', '') or '',
+                'localized_control_type': getattr(element, 'LocalizedControlType', '') or '',
+                'framework_id': getattr(element, 'FrameworkId', '') or '',
+                'process_id': getattr(element, 'ProcessId', 0),
+                'runtime_id': self._safe_get_runtime_id(element),
+                'is_enabled': getattr(element, 'IsEnabled', True),
+                'is_visible': not getattr(element, 'IsOffscreen', False),
+                'bounding_rect': {
+                    'left': rect.left if rect else 0,
+                    'top': rect.top if rect else 0,
+                    'right': rect.right if rect else 0,
+                    'bottom': rect.bottom if rect else 0,
+                    'width': (rect.right - rect.left) if rect else 0,
+                    'height': (rect.bottom - rect.top) if rect else 0
+                },
+                'patterns': self._get_available_patterns(element),
+                'parent_window': self._get_parent_window_info(element)
+            }
+        except Exception as e:
+            return {'error': str(e)}
+    
+    def _safe_get_runtime_id(self, element):
+        """Obtém RuntimeId de forma segura"""
+        try:
+            runtime_id = getattr(element, 'RuntimeId', None)
+            if runtime_id:
+                return list(runtime_id)
+            return []
+        except Exception:
+            return []
+    
+    def _build_parent_chain(self, element, max_depth=5):
+        """Constrói cadeia de elementos pai até a janela principal"""
+        chain = []
+        current = element
+        depth = 0
+        
+        try:
+            while current and depth < max_depth:
+                parent = current.GetParentControl()
+                if not parent or parent == current:
+                    break
+                
+                chain.append({
+                    'automation_id': getattr(parent, 'AutomationId', '') or '',
+                    'name': getattr(parent, 'Name', '') or '',
+                    'class_name': getattr(parent, 'ClassName', '') or '',
+                    'control_type': getattr(parent, 'ControlTypeName', '') or '',
+                    'index': self._get_sibling_index(parent)
+                })
+                
+                current = parent
+                depth += 1
+                
+        except Exception:
+            pass
+        
+        return chain
+    
+    def _get_sibling_index(self, element):
+        """Obtém índice do elemento entre seus irmãos do mesmo tipo"""
+        try:
+            parent = element.GetParentControl()
+            if not parent:
+                return 0
+            
+            siblings = parent.GetChildren()
+            if not siblings:
+                return 0
+            
+            element_control_type = getattr(element, 'ControlTypeName', '')
+            same_type_count = 0
+            
+            for sibling in siblings:
+                sibling_type = getattr(sibling, 'ControlTypeName', '')
+                if sibling_type == element_control_type:
+                    if sibling == element:
+                        return same_type_count
+                    same_type_count += 1
+            
+            return 0
+        except Exception:
+            return 0
+    
+    def _get_available_patterns(self, element):
+        """Lista padrões suportados pelo elemento"""
+        patterns = []
+        pattern_methods = [
+            'GetInvokePattern', 'GetValuePattern', 'GetTextPattern', 'GetTogglePattern',
+            'GetSelectionPattern', 'GetSelectionItemPattern', 'GetExpandCollapsePattern',
+            'GetScrollPattern', 'GetGridPattern', 'GetTablePattern', 'GetWindowPattern'
+        ]
+        
+        try:
+            for method_name in pattern_methods:
+                if hasattr(element, method_name):
+                    try:
+                        pattern = getattr(element, method_name)()
+                        if pattern:
+                            patterns.append(method_name.replace('Get', '').replace('Pattern', '') + 'Pattern')
+                    except:
+                        pass
+        except Exception:
+            pass
+        
+        return patterns
+    
+    def _get_parent_window_info(self, element):
+        """Obtém informações da janela pai"""
+        try:
+            current = element
+            max_depth = 10
+            depth = 0
+            
+            while current and depth < max_depth:
+                control_type = getattr(current, 'ControlTypeName', '')
+                if control_type in ['WindowControl', 'Window']:
+                    return {
+                        'title': getattr(current, 'Name', '') or '',
+                        'class_name': getattr(current, 'ClassName', '') or '',
+                        'automation_id': getattr(current, 'AutomationId', '') or '',
+                        'process_id': getattr(current, 'ProcessId', 0)
+                    }
+                try:
+                    current = current.GetParentControl()
+                    if not current:
+                        break
+                    depth += 1
+                except:
+                    break
+        except Exception:
+            pass
+        return None
+    
+    def _strategy_automation_id(self, element_info, parent_chain):
+        """Estratégia mais robusta: AutomationId + Janela"""
+        automation_id = element_info.get('automation_id')
+        if not automation_id:
+            return None
+        
+        window_info = element_info.get('parent_window')
+        if window_info and window_info.get('title'):
+            return f"""
+<!-- Seletor por AutomationId (MAIS ROBUSTO) -->
+<Selector>
+    <Window title="{window_info['title']}" class="{window_info.get('class_name', '*')}" />
+    <Element automationId="{automation_id}" controlType="{element_info.get('control_type', '*')}" />
+</Selector>"""
+        else:
+            return f"""
+<!-- Seletor por AutomationId Simples -->
+<Selector>
+    <Element automationId="{automation_id}" controlType="{element_info.get('control_type', '*')}" />
+</Selector>"""
+    
+    def _strategy_name_and_type(self, element_info, parent_chain):
+        """Estratégia por Name + ControlType"""
+        name = element_info.get('name')
+        control_type = element_info.get('control_type')
+        
+        if not name or not control_type:
+            return None
+        
+        window_info = element_info.get('parent_window')
+        if window_info and window_info.get('title'):
+            return f"""
+<!-- Seletor por Name + ControlType -->
+<Selector>
+    <Window title="{window_info['title']}" />
+    <Element name="{name}" controlType="{control_type}" />
+</Selector>"""
+        else:
+            return f"""
+<!-- Seletor por Name + ControlType Simples -->
+<Selector>
+    <Element name="{name}" controlType="{control_type}" />
+</Selector>"""
+    
+    def _strategy_class_and_index(self, element_info, parent_chain):
+        """Estratégia por ClassName + Índice"""
+        class_name = element_info.get('class_name')
+        control_type = element_info.get('control_type')
+        
+        if not class_name:
+            return None
+        
+        # Tenta usar informação do pai para criar seletor mais específico
+        if parent_chain and len(parent_chain) > 0:
+            parent = parent_chain[0]
+            parent_selector = ""
+            
+            if parent.get('automation_id'):
+                parent_selector = f'automationId="{parent["automation_id"]}"'
+            elif parent.get('name'):
+                parent_selector = f'name="{parent["name"]}"'
+            elif parent.get('class_name'):
+                parent_selector = f'className="{parent["class_name"]}"'
+            
+            if parent_selector:
+                return f"""
+<!-- Seletor por Hierarquia com ClassName -->
+<Selector>
+    <Element {parent_selector} controlType="{parent.get('control_type', '*')}" />
+    <Element className="{class_name}" controlType="{control_type}" />
+</Selector>"""
+        
+        return f"""
+<!-- Seletor por ClassName -->
+<Selector>
+    <Element className="{class_name}" controlType="{control_type}" />
+</Selector>"""
+    
+    def _strategy_hierarchical_path(self, element_info, parent_chain):
+        """Estratégia de caminho hierárquico completo"""
+        if not parent_chain or len(parent_chain) < 2:
+            return None
+        
+        selector_parts = []
+        window_info = element_info.get('parent_window')
+        
+        if window_info and window_info.get('title'):
+            selector_parts.append(f'<Window title="{window_info["title"]}" />')
+        
+        # Adiciona elementos pai em ordem reversa (do mais alto para o mais baixo)
+        for parent in reversed(parent_chain[:3]):  # Limita a 3 níveis para não ficar muito específico
+            attributes = []
+            
+            if parent.get('automation_id'):
+                attributes.append(f'automationId="{parent["automation_id"]}"')
+            elif parent.get('name'):
+                attributes.append(f'name="{parent["name"]}"')
+            elif parent.get('class_name'):
+                attributes.append(f'className="{parent["class_name"]}"')
+            
+            if parent.get('control_type'):
+                attributes.append(f'controlType="{parent["control_type"]}"')
+            
+            if parent.get('index', 0) > 0:
+                attributes.append(f'index="{parent["index"]}"')
+            
+            if attributes:
+                selector_parts.append(f'<Element {" ".join(attributes)} />')
+        
+        # Adiciona o elemento target
+        target_attrs = []
+        if element_info.get('automation_id'):
+            target_attrs.append(f'automationId="{element_info["automation_id"]}"')
+        elif element_info.get('name'):
+            target_attrs.append(f'name="{element_info["name"]}"')
+        elif element_info.get('class_name'):
+            target_attrs.append(f'className="{element_info["class_name"]}"')
+        
+        if element_info.get('control_type'):
+            target_attrs.append(f'controlType="{element_info["control_type"]}"')
+        
+        if target_attrs:
+            selector_parts.append(f'<Element {" ".join(target_attrs)} />')
+        
+        if len(selector_parts) > 1:
+            return f"""
+<!-- Seletor Hierárquico Completo -->
+<Selector>
+    {chr(10).join(f'    {part}' for part in selector_parts)}
+</Selector>"""
+        
+        return None
+    
+    def _strategy_partial_attributes(self, element_info, parent_chain):
+        """Estratégia com atributos parciais/contains"""
+        name = element_info.get('name', '')
+        control_type = element_info.get('control_type')
+        
+        if len(name) < 3:  # Nome muito curto, não é confiável
+            return None
+        
+        # Usa parte do nome para seleção mais flexível
+        partial_name = name[:min(len(name), 20)]  # Primeiros 20 caracteres
+        
+        return f"""
+<!-- Seletor por Nome Parcial -->
+<Selector>
+    <Element nameContains="{partial_name}" controlType="{control_type}" />
+</Selector>"""
+    
+    def _strategy_emergency_fallback(self, element_info):
+        """Estratégia de emergência usando coordenadas"""
+        rect = element_info.get('bounding_rect')
+        window_info = element_info.get('parent_window')
+        
+        if not rect or not window_info:
+            return None
+        
+        center_x = rect['left'] + rect['width'] // 2
+        center_y = rect['top'] + rect['height'] // 2
+        
+        return f"""
+<!-- Seletor de Emergência por Coordenadas (MENOS ROBUSTO) -->
+<Selector>
+    <Window title="{window_info.get('title', '*')}" />
+    <Element coordinateX="{center_x}" coordinateY="{center_y}" tolerance="5" />
+    <!-- Região: x={rect['left']}, y={rect['top']}, w={rect['width']}, h={rect['height']} -->
+</Selector>"""
