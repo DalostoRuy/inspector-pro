@@ -1043,6 +1043,49 @@ class ElementInspector:
                 'message': f"Erro durante teste: {str(e)}"
             }
     
+    def execute_xml_selector_action(self, xml_selector, action_type="click"):
+        """
+        Executa ação em elemento encontrado por seletor XML
+        
+        Args:
+            xml_selector (str): Seletor XML
+            action_type (str): Tipo de ação a executar ("click", "double_click", "right_click")
+            
+        Returns:
+            dict: Resultado da execução
+        """
+        print_info(f"Executando ação '{action_type}' via seletor XML...")
+        
+        try:
+            # Usa o executor do validador para execução de ação
+            result = self.xml_validator.executor.execute_click_action(
+                xml_selector, 
+                action_type=action_type,
+                timeout=5
+            )
+            
+            if result['success']:
+                print_success(f"✓ Ação '{action_type}' executada com sucesso!")
+                print_colored(f"Método usado: {result.get('method', 'N/A')}", Fore.GREEN)
+                if 'position' in result:
+                    print_colored(f"Posição: {result['position']}", Fore.CYAN)
+                if 'element_info' in result:
+                    element_info = result['element_info']
+                    print_colored(f"Elemento: {element_info.get('name', 'N/A')} ({element_info.get('control_type', 'N/A')})", Fore.CYAN)
+            else:
+                print_error(f"✗ Falha ao executar ação: {result.get('error', 'Erro desconhecido')}")
+            
+            return result
+            
+        except Exception as e:
+            error_msg = f"Erro ao executar ação: {str(e)}"
+            print_error(error_msg)
+            return {
+                'success': False,
+                'error': str(e),
+                'message': error_msg
+            }
+    
     def optimize_element_selectors(self, element, element_name):
         """
         Otimiza seletores para um elemento já capturado

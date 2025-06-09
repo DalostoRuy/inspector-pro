@@ -668,6 +668,28 @@ class UIInspectorApp:
                     print_colored("• Seletor instável - não recomendado para produção", Fore.RED)
                     print_colored("• Considere capturar o elemento novamente", Fore.RED)
                 
+                # NOVA FUNCIONALIDADE: Opções de ação
+                print()
+                print_colored("OPÇÕES DE AÇÃO:", Fore.YELLOW)
+                print_colored("1. Executar CLIQUE no elemento", Fore.WHITE)
+                print_colored("2. Executar CLIQUE DUPLO no elemento", Fore.WHITE)
+                print_colored("3. Executar CLIQUE DIREITO no elemento", Fore.WHITE)
+                print_colored("4. Apenas testar (não executar ação)", Fore.WHITE)
+                print()
+                
+                action_choice = input(f"{Fore.CYAN}Escolha uma ação (1-4): {Style.RESET_ALL}").strip()
+                
+                if action_choice == "1":
+                    self._execute_selector_action(xml_selector, "click")
+                elif action_choice == "2":
+                    self._execute_selector_action(xml_selector, "double_click")
+                elif action_choice == "3":
+                    self._execute_selector_action(xml_selector, "right_click")
+                elif action_choice == "4":
+                    print_info("Teste concluído sem execução de ação")
+                else:
+                    print_warning("Opção inválida - apenas testando seletor")
+                
             else:
                 print_error("✗ SELETOR INVÁLIDO!")
                 print_colored(f"Erro: {test_result.get('message', 'Erro desconhecido')}", Fore.RED)
@@ -690,6 +712,59 @@ class UIInspectorApp:
             print_error(f"Erro durante teste: {str(e)}")
         
         wait_for_keypress()
+    
+    def _execute_selector_action(self, xml_selector, action_type):
+        """
+        Executa ação específica no elemento encontrado pelo seletor
+        
+        Args:
+            xml_selector (str): Seletor XML
+            action_type (str): Tipo de ação a executar
+        """
+        print()
+        print_warning(f"EXECUTANDO {action_type.upper().replace('_', ' ')}...")
+        print_colored("⚠️  Esta ação será executada IMEDIATAMENTE!", Fore.YELLOW)
+        print_colored("⚠️  Certifique-se de que a janela/aplicação está na posição correta!", Fore.YELLOW)
+        
+        confirm = input(f"{Fore.CYAN}Confirma execução? (s/n): {Style.RESET_ALL}").strip().lower()
+        
+        if confirm not in ['s', 'sim', 'y', 'yes']:
+            print_info("Execução cancelada pelo usuário")
+            return
+        
+        print()
+        print_info("Aguarde 3 segundos para execução...")
+        for i in range(3, 0, -1):
+            print_colored(f"{i}...", Fore.YELLOW)
+            time.sleep(1)
+        
+        print()
+        try:
+            # Executa a ação
+            action_result = self.inspector.execute_xml_selector_action(xml_selector, action_type)
+            
+            if action_result['success']:
+                print()
+                print_success(f"✓ {action_type.upper().replace('_', ' ')} EXECUTADO COM SUCESSO!")
+                print_colored(f"💡 {action_result.get('message', 'Ação concluída')}", Fore.GREEN)
+                
+                if 'execution_time' in action_result:
+                    print_colored(f"⏱️  Tempo de execução: {action_result['execution_time']:.3f}s", Fore.CYAN)
+                    
+            else:
+                print()
+                print_error(f"✗ FALHA AO EXECUTAR {action_type.upper().replace('_', ' ')}:")
+                print_colored(f"❌ {action_result.get('error', 'Erro desconhecido')}", Fore.RED)
+                
+                print()
+                print_colored("POSSÍVEIS CAUSAS:", Fore.YELLOW)
+                print_colored("• Elemento não encontrado", Fore.WHITE)
+                print_colored("• Janela/aplicação foi fechada", Fore.WHITE)
+                print_colored("• Elemento não suporta a ação solicitada", Fore.WHITE)
+                print_colored("• Permissions ou segurança bloquearam a ação", Fore.WHITE)
+                
+        except Exception as e:
+            print_error(f"Erro durante execução de ação: {str(e)}")
     
     def open_elements_folder(self):
         """

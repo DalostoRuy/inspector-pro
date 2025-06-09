@@ -516,3 +516,241 @@ class XMLSelectorExecutor:
             
         except Exception:
             return False
+    
+    def execute_click_action(self, xml_selector, action_type="click", timeout=None):
+        """
+        Executa ação de clique no elemento encontrado pelo seletor
+        
+        Args:
+            xml_selector (str): Seletor XML para encontrar o elemento
+            action_type (str): Tipo de ação ("click", "double_click", "right_click")
+            timeout (int): Timeout para encontrar elemento
+            
+        Returns:
+            dict: Resultado da execução da ação
+        """
+        print_info(f"Executando ação '{action_type}' via seletor XML...")
+        
+        start_time = time.time()
+        
+        try:
+            # 1. Encontra o elemento
+            element = self.execute_selector(xml_selector, timeout)
+            
+            if not element:
+                return {
+                    'success': False,
+                    'error': 'Elemento não encontrado pelo seletor',
+                    'execution_time': time.time() - start_time
+                }
+            
+            print_success("✓ Elemento encontrado! Executando ação...")
+            
+            # 2. Executa ação baseada no tipo
+            if action_type == "click":
+                result = self._perform_click(element)
+            elif action_type == "double_click":
+                result = self._perform_double_click(element)
+            elif action_type == "right_click":
+                result = self._perform_right_click(element)
+            else:
+                return {
+                    'success': False,
+                    'error': f'Tipo de ação não suportado: {action_type}',
+                    'execution_time': time.time() - start_time
+                }
+            
+            result['execution_time'] = time.time() - start_time
+            result['element_info'] = {
+                'name': getattr(element, 'Name', ''),
+                'automation_id': getattr(element, 'AutomationId', ''),
+                'control_type': getattr(element, 'ControlTypeName', '')
+            }
+            
+            return result
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Erro ao executar ação: {str(e)}',
+                'execution_time': time.time() - start_time
+            }
+    
+    def _perform_click(self, element):
+        """
+        Executa clique no elemento usando múltiplos métodos
+        
+        Args:
+            element: Elemento UI Automation
+            
+        Returns:
+            dict: Resultado da execução do clique
+        """
+        try:
+            print_info("Tentando clique via InvokePattern...")
+            
+            # Método 1: InvokePattern (mais robusto e recomendado)
+            if hasattr(element, 'GetInvokePattern'):
+                try:
+                    invoke_pattern = element.GetInvokePattern()
+                    if invoke_pattern:
+                        invoke_pattern.Invoke()
+                        print_success("✓ Clique executado via InvokePattern")
+                        return {
+                            'success': True,
+                            'method': 'InvokePattern',
+                            'message': 'Clique executado via padrão de invocação (método recomendado)'
+                        }
+                except Exception as e:
+                    print_warning(f"InvokePattern falhou: {str(e)}")
+            
+            print_info("InvokePattern não disponível. Tentando clique direto...")
+            
+            # Método 2: Clique direto do uiautomation
+            try:
+                element.Click()
+                print_success("✓ Clique executado via método direto")
+                return {
+                    'success': True,
+                    'method': 'Direct Click',
+                    'message': 'Clique executado via método direto do elemento'
+                }
+            except Exception as e:
+                print_warning(f"Clique direto falhou: {str(e)}")
+            
+            print_info("Tentando clique por coordenadas...")
+            
+            # Método 3: Clique por coordenadas (fallback)
+            try:
+                import win32api, win32con
+                
+                rect = element.BoundingRectangle
+                if rect:
+                    center_x = rect.left + (rect.right - rect.left) // 2
+                    center_y = rect.top + (rect.bottom - rect.top) // 2
+                    
+                    # Move mouse para o centro do elemento
+                    win32api.SetCursorPos((center_x, center_y))
+                    time.sleep(0.1)  # Pequena pausa
+                    
+                    # Executa clique
+                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+                    
+                    print_success(f"✓ Clique executado por coordenadas ({center_x}, {center_y})")
+                    return {
+                        'success': True,
+                        'method': 'Coordinate Click',
+                        'position': (center_x, center_y),
+                        'message': f'Clique executado por coordenadas na posição ({center_x}, {center_y})'
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'error': 'Não foi possível obter coordenadas do elemento'
+                    }
+                    
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': f'Clique por coordenadas falhou: {str(e)}'
+                }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Erro geral durante clique: {str(e)}'
+            }
+    
+    def _perform_double_click(self, element):
+        """
+        Executa clique duplo no elemento
+        
+        Args:
+            element: Elemento UI Automation
+            
+        Returns:
+            dict: Resultado da execução do clique duplo
+        """
+        try:
+            import win32api, win32con
+            
+            rect = element.BoundingRectangle
+            if rect:
+                center_x = rect.left + (rect.right - rect.left) // 2
+                center_y = rect.top + (rect.bottom - rect.top) // 2
+                
+                # Move mouse para o centro do elemento
+                win32api.SetCursorPos((center_x, center_y))
+                time.sleep(0.1)
+                
+                # Executa clique duplo
+                win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+                win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+                time.sleep(0.05)  # Pequena pausa entre cliques
+                win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+                win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+                
+                print_success(f"✓ Clique duplo executado em ({center_x}, {center_y})")
+                return {
+                    'success': True,
+                    'method': 'Double Click',
+                    'position': (center_x, center_y),
+                    'message': f'Clique duplo executado na posição ({center_x}, {center_y})'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Não foi possível obter coordenadas para clique duplo'
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Erro durante clique duplo: {str(e)}'
+            }
+    
+    def _perform_right_click(self, element):
+        """
+        Executa clique direito no elemento
+        
+        Args:
+            element: Elemento UI Automation
+            
+        Returns:
+            dict: Resultado da execução do clique direito
+        """
+        try:
+            import win32api, win32con
+            
+            rect = element.BoundingRectangle
+            if rect:
+                center_x = rect.left + (rect.right - rect.left) // 2
+                center_y = rect.top + (rect.bottom - rect.top) // 2
+                
+                # Move mouse para o centro do elemento
+                win32api.SetCursorPos((center_x, center_y))
+                time.sleep(0.1)
+                
+                # Executa clique direito
+                win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, 0, 0)
+                win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, 0, 0)
+                
+                print_success(f"✓ Clique direito executado em ({center_x}, {center_y})")
+                return {
+                    'success': True,
+                    'method': 'Right Click',
+                    'position': (center_x, center_y),
+                    'message': f'Clique direito executado na posição ({center_x}, {center_y})'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Não foi possível obter coordenadas para clique direito'
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Erro durante clique direito: {str(e)}'
+            }
