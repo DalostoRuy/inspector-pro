@@ -9,6 +9,7 @@ import win32api
 import win32con
 import uiautomation as auto
 from xml_selector_generator import XMLSelectorGenerator
+from xml_selector_validator import XMLSelectorValidator
 from utils import *
 
 # Importação opcional para debug avançado
@@ -27,12 +28,14 @@ class ElementInspector:
     """
     
     def __init__(self):
-        """Inicializa o inspector com gerador de XML"""
+        """Inicializa o inspector com gerador de XML e validador"""
         self.xml_generator = XMLSelectorGenerator()
+        self.xml_validator = XMLSelectorValidator()
         self.is_capturing = False
         self.captured_element = None
         self.mouse_hook = None
         self.anchor_element = None  # Elemento âncora para clique relativo
+        self.enable_validation = True  # Controla se validação automática está ativa
         
     def start_capture_mode(self, element_name, capture_type="element"):
         """
@@ -489,10 +492,29 @@ class ElementInspector:
             element_data = self._extract_element_properties(element)
             element_data['capture_type'] = 'single_element'  # Marca tipo de captura
             
-            # Gera seletores XML
-            print_info("Gerando seletores XML robustos...")
-            xml_selectors = self.xml_generator.generate_robust_selector(element)
-            element_data['xml_selectors'] = xml_selectors
+            # Gera seletores XML executáveis com validação
+            if self.enable_validation:
+                print_info("Gerando e validando seletores XML executáveis...")
+                validation_result = self.xml_validator.generate_and_validate_selectors(element, validate_immediately=True)
+                
+                # Usa seletores validados se disponíveis, senão gera seletores tradicionais
+                if validation_result['valid_selectors']:
+                    element_data['xml_selectors'] = validation_result['valid_selectors']
+                    element_data['xml_selectors_legacy'] = self.xml_generator.generate_robust_selector(element)
+                    element_data['validation_report'] = {
+                        'total_generated': len(validation_result['valid_selectors']) + len(validation_result['invalid_selectors']),
+                        'total_valid': len(validation_result['valid_selectors']),
+                        'validation_time': validation_result['validation_time'],
+                        'generation_time': validation_result['generation_time']
+                    }
+                    print_success(f"✓ {len(validation_result['valid_selectors'])} seletores validados automaticamente")
+                else:
+                    print_warning("Nenhum seletor validado - usando seletores tradicionais")
+                    element_data['xml_selectors'] = self.xml_generator.generate_robust_selector(element)
+                    element_data['validation_report'] = {'error': 'Falha na validação automática'}
+            else:
+                print_info("Gerando seletores XML tradicionais...")
+                element_data['xml_selectors'] = self.xml_generator.generate_robust_selector(element)
             
             # Extrai informações da janela
             window_info = self._extract_window_info(element)
@@ -971,3 +993,105 @@ class ElementInspector:
         if selectors:
             print_colored("Seletor XML principal:", Fore.MAGENTA)
             print_colored(selectors[0], Fore.WHITE)
+            
+        # Exibe informações de validação se disponíveis
+        validation_report = element_data.get('validation_report', {})
+        if validation_report and 'total_valid' in validation_report:
+            print_colored(f"Validação: {validation_report['total_valid']}/{validation_report['total_generated']} seletores válidos", Fore.GREEN)
+    
+    def test_xml_selector(self, xml_selector):
+        """
+        Testa um seletor XML fornecido pelo usuário
+        
+        Args:
+            xml_selector: String XML do seletor para testar
+            
+        Returns:
+            dict: Resultado do teste
+        """
+        print_info("Testando seletor XML...")
+        
+        try:
+            # Valida o seletor
+            validation_result = self.xml_validator.validate_single_selector(xml_selector)
+            
+            if validation_result['valid']:
+                print_success("✓ Seletor XML válido!")
+                
+                # Testa confiabilidade
+                reliability_result = self.xml_validator.test_selector_reliability(xml_selector, test_count=3)
+                
+                return {
+                    'success': True,
+                    'validation': validation_result,
+                    'reliability': reliability_result,
+                    'message': f"Seletor válido com {reliability_result['reliability_percentage']:.1f}% de confiabilidade"
+                }
+            else:
+                print_error("✗ Seletor XML inválido")
+                return {
+                    'success': False,
+                    'validation': validation_result,
+                    'message': f"Seletor inválido: {validation_result.get('errors', ['Erro desconhecido'])[0]}"
+                }
+                
+        except Exception as e:
+            print_error(f"Erro ao testar seletor: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': f"Erro durante teste: {str(e)}"
+            }
+    
+    def optimize_element_selectors(self, element, element_name):
+        """
+        Otimiza seletores para um elemento já capturado
+        
+        Args:
+            element: Elemento UI Automation
+            element_name: Nome do elemento
+            
+        Returns:
+            dict: Resultado da otimização
+        """
+        print_info("Otimizando seletores para máxima confiabilidade...")
+        
+        try:
+            optimization_result = self.xml_validator.optimize_selectors(element, max_selectors=3)
+            
+            if optimization_result['optimized_selectors']:
+                print_success(f"✓ {len(optimization_result['optimized_selectors'])} seletores otimizados")
+                
+                # Salva resultado da otimização
+                folder_path = create_element_folder(f"{element_name}_optimized")
+                
+                optimized_data = {
+                    'element_name': element_name,
+                    'capture_type': 'optimized_selectors',
+                    'optimized_selectors': optimization_result['optimized_selectors'],
+                    'optimization_report': optimization_result['optimization_report'],
+                    'generated_at': time.time()
+                }
+                
+                file_path = save_element_data(folder_path, optimized_data)
+                
+                return {
+                    'success': True,
+                    'folder_path': folder_path,
+                    'file_path': file_path,
+                    'optimization_result': optimization_result
+                }
+            else:
+                print_warning("Nenhum seletor pôde ser otimizado")
+                return {
+                    'success': False,
+                    'message': 'Nenhum seletor válido encontrado para otimização'
+                }
+                
+        except Exception as e:
+            print_error(f"Erro durante otimização: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': f"Erro durante otimização: {str(e)}"
+            }

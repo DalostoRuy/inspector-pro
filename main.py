@@ -39,7 +39,7 @@ class UIInspectorApp:
         Banner com título e informações sobre a ferramenta
         """
         print_colored("=" * 70, Fore.CYAN)
-        print_colored("                    UI INSPECTOR v1.0", Fore.YELLOW)
+        print_colored("                    UI INSPECTOR v2.0", Fore.YELLOW)
         print_colored("              Inspetor de Elementos Windows Desktop", Fore.WHITE)
         print_colored("                    Powered by UIA3", Fore.GREEN)
         print_colored("=" * 70, Fore.CYAN)
@@ -55,9 +55,10 @@ class UIInspectorApp:
         print_colored("1. Capturar Elemento", Fore.WHITE)
         print_colored("2. Capturar Elemento Âncora + Clique Relativo", Fore.WHITE)
         print_colored("3. Listar Elementos Capturados", Fore.WHITE)
-        print_colored("4. Abrir Pasta de Elementos", Fore.WHITE)
-        print_colored("5. Ajuda", Fore.WHITE)
-        print_colored("6. Sair", Fore.WHITE)
+        print_colored("4. Testar Seletor XML", Fore.CYAN)
+        print_colored("5. Abrir Pasta de Elementos", Fore.WHITE)
+        print_colored("6. Ajuda", Fore.WHITE)
+        print_colored("7. Sair", Fore.WHITE)
         print()
     
     def get_user_choice(self):
@@ -70,10 +71,10 @@ class UIInspectorApp:
             str: Escolha do usuário ou "6" para sair
         """
         try:
-            choice = input(f"{Fore.CYAN}Escolha uma opção (1-6): {Style.RESET_ALL}").strip()
+            choice = input(f"{Fore.CYAN}Escolha uma opção (1-7): {Style.RESET_ALL}").strip()
             return choice
         except KeyboardInterrupt:
-            return "6"
+            return "7"
         except:
             return ""
     
@@ -579,6 +580,117 @@ class UIInspectorApp:
         except Exception as e:
             print_error(f"Erro ao carregar elemento: {str(e)}")
     
+    def test_xml_selector_workflow(self):
+        """
+        Fluxo completo de teste de seletor XML
+        
+        Permite ao usuário inserir um seletor XML e testa sua funcionalidade
+        """
+        print_header("TESTE DE SELETOR XML")
+        
+        print_colored("SOBRE O TESTE DE SELETORES:", Fore.YELLOW)
+        print_colored("• Valida sintaxe XML do seletor", Fore.WHITE)
+        print_colored("• Testa se consegue encontrar o elemento", Fore.WHITE)
+        print_colored("• Avalia confiabilidade com múltiplas execuções", Fore.WHITE)
+        print_colored("• Mede tempo de execução", Fore.WHITE)
+        print()
+        
+        print_colored("FORMATO DO SELETOR XML:", Fore.YELLOW)
+        print_colored("Exemplo básico:", Fore.CYAN)
+        print_colored('<Selector><Window title="Calculadora" /><Element automationId="num1Button" /></Selector>', Fore.WHITE)
+        print()
+        
+        print_colored("Cole o seletor XML para testar:", Fore.CYAN)
+        print_colored("(Digite uma linha vazia para cancelar)", Fore.YELLOW)
+        
+        # Coleta entrada do usuário (pode ser multilinha)
+        xml_lines = []
+        while True:
+            try:
+                line = input().strip()
+                if not line:
+                    if not xml_lines:
+                        print_warning("Teste cancelado")
+                        wait_for_keypress()
+                        return
+                    else:
+                        break
+                xml_lines.append(line)
+            except KeyboardInterrupt:
+                print_warning("Teste cancelado")
+                wait_for_keypress()
+                return
+        
+        xml_selector = ' '.join(xml_lines).strip()
+        
+        if not xml_selector:
+            print_error("Seletor XML vazio")
+            wait_for_keypress()
+            return
+        
+        print()
+        print_info("Testando seletor XML...")
+        print_colored(f"Seletor: {xml_selector}", Fore.MAGENTA)
+        print()
+        
+        try:
+            # Executa teste usando o inspector
+            test_result = self.inspector.test_xml_selector(xml_selector)
+            
+            # Exibe resultado
+            print_header("RESULTADO DO TESTE")
+            
+            if test_result['success']:
+                print_success("✓ SELETOR VÁLIDO!")
+                
+                reliability = test_result.get('reliability', {})
+                if reliability:
+                    print_colored(f"Confiabilidade: {reliability['reliability_percentage']:.1f}%", Fore.GREEN)
+                    print_colored(f"Classificação: {reliability['classification']}", Fore.GREEN)
+                    print_colored(f"Tempo médio: {reliability['average_execution_time']:.3f}s", Fore.CYAN)
+                    print_colored(f"Execuções bem-sucedidas: {reliability['successful_executions']}/{reliability['total_executions']}", Fore.CYAN)
+                
+                validation = test_result.get('validation', {})
+                if validation:
+                    print_colored(f"Tempo de validação: {validation['validation_time']:.3f}s", Fore.CYAN)
+                
+                print()
+                print_colored("RECOMENDAÇÕES:", Fore.YELLOW)
+                
+                reliability_pct = reliability.get('reliability_percentage', 0)
+                if reliability_pct >= 90:
+                    print_colored("• Excelente seletor - recomendado para produção", Fore.GREEN)
+                elif reliability_pct >= 75:
+                    print_colored("• Bom seletor - adequado para a maioria dos casos", Fore.GREEN)
+                elif reliability_pct >= 50:
+                    print_colored("• Seletor moderado - considere usar como fallback", Fore.YELLOW)
+                else:
+                    print_colored("• Seletor instável - não recomendado para produção", Fore.RED)
+                    print_colored("• Considere capturar o elemento novamente", Fore.RED)
+                
+            else:
+                print_error("✗ SELETOR INVÁLIDO!")
+                print_colored(f"Erro: {test_result.get('message', 'Erro desconhecido')}", Fore.RED)
+                
+                validation = test_result.get('validation', {})
+                if validation and validation.get('errors'):
+                    print()
+                    print_colored("DETALHES DO ERRO:", Fore.YELLOW)
+                    for error in validation['errors']:
+                        print_colored(f"• {error}", Fore.RED)
+                
+                print()
+                print_colored("DICAS PARA CORREÇÃO:", Fore.YELLOW)
+                print_colored("• Verifique se a janela/aplicação está aberta", Fore.WHITE)
+                print_colored("• Confirme se os atributos estão corretos", Fore.WHITE)
+                print_colored("• Tente um seletor mais genérico", Fore.WHITE)
+                print_colored("• Capture o elemento novamente", Fore.WHITE)
+        
+        except Exception as e:
+            print_error(f"Erro durante teste: {str(e)}")
+        
+        wait_for_keypress()
+    
     def open_elements_folder(self):
         """
         Abre pasta de elementos capturados
@@ -658,7 +770,8 @@ class UIInspectorApp:
         print_colored("    • Estados: Habilitado, visível, focalizável", Fore.WHITE)
         print_colored("    • Hierarquia: Informações do pai e número de filhos", Fore.WHITE)
         print_colored("    • Padrões: Todos os padrões UIA suportados", Fore.WHITE)
-        print_colored("    • Seletores: Múltiplos seletores XML robustos", Fore.WHITE)
+        print_colored("    • Seletores: Múltiplos seletores XML executáveis e validados", Fore.WHITE)
+        print_colored("    • Validação: Seletores testados automaticamente", Fore.WHITE)
         print_colored("    • Detecção: Identifica elementos que abrem janelas", Fore.WHITE)
         print_colored("  CAPTURA ÂNCORA+CLIQUE:", Fore.CYAN)
         print_colored("    • Todas as informações do elemento âncora", Fore.WHITE)
@@ -675,19 +788,28 @@ class UIInspectorApp:
         print_colored("  ESC                  - Cancelar captura", Fore.GREEN)
         print()
         
+        print_colored("TESTE DE SELETORES XML:", Fore.YELLOW)
+        print_colored("  • Teste seletores XML personalizados", Fore.WHITE)
+        print_colored("  • Validação automática de sintaxe", Fore.WHITE)
+        print_colored("  • Teste de confiabilidade com múltiplas execuções", Fore.WHITE)
+        print_colored("  • Métricas de performance e recomendações", Fore.WHITE)
+        print()
+        
         print_colored("ARQUIVOS E PASTAS:", Fore.YELLOW)
         print_colored("  • Elementos salvos em: captured_elements/", Fore.WHITE)
         print_colored("  • Cada elemento em pasta própria com timestamp", Fore.WHITE)
         print_colored("  • Dados salvos em JSON com estrutura preservada", Fore.WHITE)
-        print_colored("  • Use opção 4 para abrir a pasta no explorador", Fore.WHITE)
+        print_colored("  • Use opção 5 para abrir a pasta no explorador", Fore.WHITE)
         print()
         
         print_colored("DICAS AVANÇADAS:", Fore.YELLOW)
         print_colored("  • O inspector faz até 3 tentativas de captura", Fore.WHITE)
         print_colored("  • Detecta automaticamente o framework usado", Fore.WHITE)
         print_colored("  • Gera múltiplos seletores por ordem de robustez", Fore.WHITE)
+        print_colored("  • Seletores são validados automaticamente durante captura", Fore.WHITE)
         print_colored("  • Clique relativo funciona mesmo com janelas redimensionadas", Fore.WHITE)
         print_colored("  • Preserva estrutura complexa de dados no JSON", Fore.WHITE)
+        print_colored("  • Use a opção 4 para testar seletores personalizados", Fore.WHITE)
         print()
         
         wait_for_keypress()
@@ -712,10 +834,12 @@ class UIInspectorApp:
                 elif choice == "3":
                     self.list_captured_elements()
                 elif choice == "4":
-                    self.open_elements_folder()
+                    self.test_xml_selector_workflow()
                 elif choice == "5":
-                    self.show_help()
+                    self.open_elements_folder()
                 elif choice == "6":
+                    self.show_help()
+                elif choice == "7":
                     print_info("Encerrando UI Inspector...")
                     self.running = False
                 else:

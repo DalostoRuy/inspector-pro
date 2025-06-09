@@ -76,6 +76,46 @@ class XMLSelectorGenerator:
         
         return selectors
     
+    def generate_executable_selectors(self, element):
+        """
+        Gera seletores XML executáveis e funcionais
+        
+        Esta versão produz XML limpo e válido que pode ser executado
+        pelo XMLSelectorExecutor.
+        
+        Args:
+            element: Elemento UI Automation a ser processado
+            
+        Returns:
+            list: Lista de seletores XML executáveis
+        """
+        selectors = []
+        
+        # Coleta informações do elemento e seus ancestrais
+        element_info = self._extract_element_info(element)
+        parent_chain = self._build_parent_chain(element)
+        
+        # Estratégias executáveis em ordem de robustez
+        executable_strategies = [
+            self._executable_strategy_automation_id,
+            self._executable_strategy_name_and_type,
+            self._executable_strategy_class_name,
+            self._executable_strategy_hierarchical
+        ]
+        
+        for strategy in executable_strategies:
+            try:
+                result = strategy(element_info, parent_chain)
+                if result:
+                    if isinstance(result, list):
+                        selectors.extend(result)
+                    else:
+                        selectors.append(result)
+            except Exception:
+                continue
+        
+        return selectors
+    
     def _extract_element_info(self, element):
         """
         Extrai todas as informações relevantes do elemento
@@ -639,3 +679,152 @@ class XMLSelectorGenerator:
             selectors.append(selector)
         
         return selectors
+    
+    # ================== MÉTODOS DE ESTRATÉGIA EXECUTÁVEL ==================
+    
+    def _executable_strategy_automation_id(self, element_info, parent_chain):
+        """
+        Gera seletor executável por AutomationId
+        
+        Args:
+            element_info: Informações do elemento
+            parent_chain: Cadeia de elementos pai
+            
+        Returns:
+            list: Lista de seletores XML executáveis
+        """
+        automation_id = element_info.get('automation_id')
+        if not automation_id:
+            return []
+        
+        selectors = []
+        control_type = element_info.get('control_type', '')
+        window_info = element_info.get('parent_window')
+        
+        # Seletor 1: Com janela específica (mais robusto)
+        if window_info and window_info.get('title'):
+            selector = f'<Selector><Window title="{self._escape_xml(window_info["title"])}" /><Element automationId="{self._escape_xml(automation_id)}" controlType="{control_type}" /></Selector>'
+            selectors.append(selector)
+        
+        # Seletor 2: Sem janela (mais flexível)
+        selector = f'<Selector><Element automationId="{self._escape_xml(automation_id)}" controlType="{control_type}" /></Selector>'
+        selectors.append(selector)
+        
+        return selectors
+    
+    def _executable_strategy_name_and_type(self, element_info, parent_chain):
+        """
+        Gera seletor executável por Name + ControlType
+        
+        Args:
+            element_info: Informações do elemento
+            parent_chain: Cadeia de elementos pai
+            
+        Returns:
+            str: Seletor XML executável ou None
+        """
+        name = element_info.get('name')
+        control_type = element_info.get('control_type')
+        
+        if not name or not control_type:
+            return None
+        
+        window_info = element_info.get('parent_window')
+        
+        if window_info and window_info.get('title'):
+            return f'<Selector><Window title="{self._escape_xml(window_info["title"])}" /><Element name="{self._escape_xml(name)}" controlType="{control_type}" /></Selector>'
+        else:
+            return f'<Selector><Element name="{self._escape_xml(name)}" controlType="{control_type}" /></Selector>'
+    
+    def _executable_strategy_class_name(self, element_info, parent_chain):
+        """
+        Gera seletor executável por ClassName
+        
+        Args:
+            element_info: Informações do elemento
+            parent_chain: Cadeia de elementos pai
+            
+        Returns:
+            str: Seletor XML executável ou None
+        """
+        class_name = element_info.get('class_name')
+        control_type = element_info.get('control_type')
+        
+        if not class_name:
+            return None
+        
+        window_info = element_info.get('parent_window')
+        
+        if window_info and window_info.get('title'):
+            return f'<Selector><Window title="{self._escape_xml(window_info["title"])}" /><Element className="{self._escape_xml(class_name)}" controlType="{control_type}" /></Selector>'
+        else:
+            return f'<Selector><Element className="{self._escape_xml(class_name)}" controlType="{control_type}" /></Selector>'
+    
+    def _executable_strategy_hierarchical(self, element_info, parent_chain):
+        """
+        Gera seletor executável hierárquico
+        
+        Args:
+            element_info: Informações do elemento
+            parent_chain: Cadeia de elementos pai
+            
+        Returns:
+            str: Seletor XML executável ou None
+        """
+        if not parent_chain or len(parent_chain) == 0:
+            return None
+        
+        # Usa apenas o primeiro pai para simplicidade
+        parent = parent_chain[0]
+        window_info = element_info.get('parent_window')
+        
+        # Monta seletor hierárquico
+        parts = []
+        
+        # Adiciona janela se disponível
+        if window_info and window_info.get('title'):
+            parts.append(f'<Window title="{self._escape_xml(window_info["title"])}" />')
+        
+        # Adiciona elemento pai
+        if parent.get('automation_id'):
+            parts.append(f'<Element automationId="{self._escape_xml(parent["automation_id"])}" />')
+        elif parent.get('name'):
+            parts.append(f'<Element name="{self._escape_xml(parent["name"])}" controlType="{parent.get("control_type", "")}" />')
+        elif parent.get('class_name'):
+            parts.append(f'<Element className="{self._escape_xml(parent["class_name"])}" />')
+        else:
+            return None
+        
+        # Adiciona elemento target
+        if element_info.get('automation_id'):
+            parts.append(f'<Element automationId="{self._escape_xml(element_info["automation_id"])}" controlType="{element_info.get("control_type", "")}" />')
+        elif element_info.get('name'):
+            parts.append(f'<Element name="{self._escape_xml(element_info["name"])}" controlType="{element_info.get("control_type", "")}" />')
+        elif element_info.get('class_name'):
+            parts.append(f'<Element className="{self._escape_xml(element_info["class_name"])}" controlType="{element_info.get("control_type", "")}" />')
+        else:
+            return None
+        
+        return f'<Selector>{"".join(parts)}</Selector>'
+    
+    def _escape_xml(self, text):
+        """
+        Escapa caracteres especiais para XML
+        
+        Args:
+            text: Texto a ser escapado
+            
+        Returns:
+            str: Texto escapado para XML
+        """
+        if not isinstance(text, str):
+            text = str(text)
+        
+        # Escapa caracteres especiais XML
+        text = text.replace('&', '&amp;')
+        text = text.replace('<', '&lt;')
+        text = text.replace('>', '&gt;')
+        text = text.replace('"', '&quot;')
+        text = text.replace("'", '&apos;')
+        
+        return text
