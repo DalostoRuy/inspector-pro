@@ -1,0 +1,200 @@
+{
+  "automation_id": "",
+  "name": "Spotify Premium",
+  "class_name": "Chrome_WidgetWin_1",
+  "control_type": "PaneControl",
+  "localized_control_type": "painel",
+  "framework_id": "Win32",
+  "framework_type": "Win32",
+  "process_id": 3888,
+  "runtime_id": [],
+  "is_enabled": true,
+  "is_visible": true,
+  "is_keyboard_focusable": false,
+  "has_keyboard_focus": false,
+  "is_content_element": true,
+  "is_control_element": true,
+  "bounding_rectangle": {
+    "left": 160,
+    "top": 66,
+    "right": 1760,
+    "bottom": 966,
+    "width": 1600,
+    "height": 900
+  },
+  "process_info": {
+    "name": "Spotify.exe",
+    "exe": "C:\\Users\\dalos\\AppData\\Roaming\\Spotify\\Spotify.exe",
+    "cmdline": "C:\\Users\\dalos\\AppData\\Roaming\\Spotify\\Spotify.exe",
+    "create_time": "2025-06-09T11:25:03.050402",
+    "memory_info": {
+      "rss": 118689792,
+      "vms": 133419008,
+      "num_page_faults": 220731,
+      "peak_wset": 231936000,
+      "wset": 118689792,
+      "peak_paged_pool": 1323968,
+      "paged_pool": 1316616,
+      "peak_nonpaged_pool": 407056,
+      "nonpaged_pool": 80056,
+      "pagefile": 133419008,
+      "peak_pagefile": 138182656,
+      "private": 133419008
+    }
+  },
+  "value": "Spotify Premium",
+  "parent_info": {
+    "automation_id": "",
+    "name": "Área de Trabalho 1",
+    "class_name": "#32769",
+    "control_type": "PaneControl"
+  },
+  "children_count": 5,
+  "window_info": {
+    "error": "Janela pai não encontrada"
+  },
+  "capture_type": "single_element",
+  "xml_selector_ultra_robust": "<!-- Seletor Ultra-Robusto gerado em 2025-06-09 11:28:27 -->\n<!-- Estratégia principal: name_hierarchy (confiabilidade: 92.0%) -->\n<!-- Estratégias de fallback: 0 disponíveis -->\n\n<Selector><Element name=\"Spotify Premium\" controlType=\"PaneControl\" className=\"Chrome_WidgetWin_1\" /></Selector>",
+  "ultra_robust_metadata": {
+    "generated_at": "2025-06-09T11:28:27.473060",
+    "generation_time": 9.019051790237427,
+    "reliability_score": 100.0,
+    "recommended_strategy": "name_hierarchy"
+  },
+  "stability_analysis": {
+    "name": {
+      "score": 0.85,
+      "value": "Spotify Premium",
+      "base_weight": 0.9,
+      "recommended": true
+    },
+    "control_type": {
+      "score": 1.0,
+      "value": "PaneControl",
+      "base_weight": 1.0,
+      "recommended": true
+    },
+    "class_name": {
+      "score": 0.3,
+      "value": "Chrome_WidgetWin_1",
+      "base_weight": 0.8,
+      "recommended": false
+    },
+    "automation_id": {
+      "score": 0.0,
+      "reason": "Atributo vazio"
+    },
+    "localized_control_type": {
+      "score": 0.7,
+      "value": "painel",
+      "base_weight": 0.7,
+      "recommended": true
+    },
+    "framework_id": {
+      "score": 0.6,
+      "value": "Win32",
+      "base_weight": 0.6,
+      "recommended": false
+    },
+    "window_title": {
+      "score": 0.0,
+      "reason": "Atributo vazio"
+    },
+    "parent_info": {
+      "score": 0.0,
+      "reason": "Atributo vazio"
+    }
+  },
+  "available_strategies": [
+    {
+      "name": "name_hierarchy",
+      "description": "Estratégia baseada em Name + ControlType + Hierarquia",
+      "reliability_score": 0.92,
+      "xml_content": "<Selector><Element name=\"Spotify Premium\" controlType=\"PaneControl\" className=\"Chrome_WidgetWin_1\" /></Selector>",
+      "attributes_used": [
+        "name",
+        "control_type",
+        "hierarchy"
+      ],
+      "robustness": "high",
+      "validation_status": "success",
+      "validation_message": "Elemento encontrado corretamente"
+    }
+  ],
+  "stability_report": {
+    "summary": {
+      "name": {
+        "score": 0.85,
+        "classification": "BOA",
+        "value": "Spotify Premium"
+      },
+      "control_type": {
+        "score": 1.0,
+        "classification": "EXCELENTE",
+        "value": "PaneControl"
+      },
+      "class_name": {
+        "score": 0.3,
+        "classification": "BAIXA",
+        "value": "Chrome_WidgetWin_1"
+      },
+      "automation_id": {
+        "score": 0.0,
+        "classification": "PÉSSIMA",
+        "value": ""
+      },
+      "localized_control_type": {
+        "score": 0.7,
+        "classification": "BOA",
+        "value": "painel"
+      },
+      "framework_id": {
+        "score": 0.6,
+        "classification": "MODERADA",
+        "value": "Win32"
+      },
+      "window_title": {
+        "score": 0.0,
+        "classification": "PÉSSIMA",
+        "value": ""
+      },
+      "parent_info": {
+        "score": 0.0,
+        "classification": "PÉSSIMA",
+        "value": ""
+      }
+    },
+    "recommendations": [
+      "Atributos mais estáveis encontrados: name, control_type, localized_control_type",
+      "Name 'Spotify Premium' é muito estável - recomendado como atributo principal"
+    ],
+    "warnings": [
+      "AutomationId '' parece dinâmico - evite usar como atributo principal"
+    ]
+  },
+  "xml_selectors_backup": [
+    "<Selector><Element name=\"Joan Jett &amp; the Blackhearts - I Love Rock &apos;N Roll\" controlType=\"PaneControl\" /></Selector>",
+    "<Selector><Element className=\"Chrome_WidgetWin_1\" controlType=\"PaneControl\" /></Selector>"
+  ],
+  "target_window_detection": {
+    "likely_opens_window": false
+  },
+  "supported_patterns": {
+    "InvokePattern": false,
+    "ValuePattern": false,
+    "TextPattern": false,
+    "TogglePattern": false,
+    "SelectionPattern": false,
+    "SelectionItemPattern": false,
+    "ExpandCollapsePattern": false,
+    "ScrollPattern": false,
+    "GridPattern": false,
+    "TablePattern": false,
+    "WindowPattern": false,
+    "TransformPattern": {
+      "supported": true
+    },
+    "RangeValuePattern": false
+  },
+  "captured_at": "2025-06-09T11:28:32.700875"
+}

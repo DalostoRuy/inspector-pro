@@ -10,6 +10,7 @@ import win32con
 import uiautomation as auto
 from xml_selector_generator import XMLSelectorGenerator
 from xml_selector_validator import XMLSelectorValidator
+from xml_selector_ultra_robust import UltraRobustSelectorGenerator
 from utils import *
 
 # Importação opcional para debug avançado
@@ -31,11 +32,13 @@ class ElementInspector:
         """Inicializa o inspector com gerador de XML e validador"""
         self.xml_generator = XMLSelectorGenerator()
         self.xml_validator = XMLSelectorValidator()
+        self.ultra_robust_generator = UltraRobustSelectorGenerator()
         self.is_capturing = False
         self.captured_element = None
         self.mouse_hook = None
         self.anchor_element = None  # Elemento âncora para clique relativo
         self.enable_validation = True  # Controla se validação automática está ativa
+        self.enable_ultra_robust = True  # Controla se geração ultra-robusta está ativa
         
     def start_capture_mode(self, element_name, capture_type="element"):
         """
@@ -492,29 +495,69 @@ class ElementInspector:
             element_data = self._extract_element_properties(element)
             element_data['capture_type'] = 'single_element'  # Marca tipo de captura
             
-            # Gera seletores XML executáveis com validação
-            if self.enable_validation:
-                print_info("Gerando e validando seletores XML executáveis...")
-                validation_result = self.xml_validator.generate_and_validate_selectors(element, validate_immediately=True)
+            # Gera seletores XML ultra-robustos
+            if self.enable_ultra_robust:
+                print_info("🎯 Gerando seletor XML ULTRA-ROBUSTO...")
                 
-                # Usa seletores validados se disponíveis, senão gera seletores tradicionais
-                if validation_result['valid_selectors']:
-                    element_data['xml_selectors'] = validation_result['valid_selectors']
-                    element_data['xml_selectors_legacy'] = self.xml_generator.generate_robust_selector(element)
-                    element_data['validation_report'] = {
-                        'total_generated': len(validation_result['valid_selectors']) + len(validation_result['invalid_selectors']),
-                        'total_valid': len(validation_result['valid_selectors']),
-                        'validation_time': validation_result['validation_time'],
-                        'generation_time': validation_result['generation_time']
-                    }
-                    print_success(f"✓ {len(validation_result['valid_selectors'])} seletores validados automaticamente")
+                ultra_robust_result = self.ultra_robust_generator.generate_ultra_robust_selector(element)
+                
+                if ultra_robust_result:
+                    # Seletor ultra-robusto principal
+                    element_data['xml_selector_ultra_robust'] = ultra_robust_result['ultra_robust_selector']
+                    element_data['ultra_robust_metadata'] = ultra_robust_result['generation_metadata']
+                    element_data['stability_analysis'] = ultra_robust_result['stability_analysis']
+                    element_data['available_strategies'] = ultra_robust_result['strategies']
+                    
+                    # Gera relatório de estabilidade
+                    stability_report = self.ultra_robust_generator.get_stability_report(
+                        ultra_robust_result['stability_analysis'], 
+                        ultra_robust_result['stability_analysis']
+                    )
+                    element_data['stability_report'] = stability_report
+                    
+                    reliability_score = ultra_robust_result['generation_metadata']['reliability_score']
+                    print_success(f"🏆 Seletor ultra-robusto gerado com {reliability_score:.1f}% de confiabilidade!")
+                    print_info(f"📊 {len(ultra_robust_result['strategies'])} estratégias validadas automaticamente")
+                    
+                    # Mantém seletores tradicionais como backup
+                    if self.enable_validation:
+                        validation_result = self.xml_validator.generate_and_validate_selectors(element, validate_immediately=True)
+                        element_data['xml_selectors_backup'] = validation_result.get('valid_selectors', [])
+                    else:
+                        element_data['xml_selectors_backup'] = self.xml_generator.generate_robust_selector(element)
+                        
                 else:
-                    print_warning("Nenhum seletor validado - usando seletores tradicionais")
-                    element_data['xml_selectors'] = self.xml_generator.generate_robust_selector(element)
-                    element_data['validation_report'] = {'error': 'Falha na validação automática'}
+                    print_warning("⚠️ Falha na geração ultra-robusta - usando método tradicional")
+                    # Fallback para método tradicional
+                    if self.enable_validation:
+                        validation_result = self.xml_validator.generate_and_validate_selectors(element, validate_immediately=True)
+                        element_data['xml_selectors'] = validation_result.get('valid_selectors', [])
+                        element_data['xml_selectors_legacy'] = self.xml_generator.generate_robust_selector(element)
+                    else:
+                        element_data['xml_selectors'] = self.xml_generator.generate_robust_selector(element)
             else:
-                print_info("Gerando seletores XML tradicionais...")
-                element_data['xml_selectors'] = self.xml_generator.generate_robust_selector(element)
+                # Método tradicional (modo de compatibilidade)
+                if self.enable_validation:
+                    print_info("Gerando e validando seletores XML executáveis...")
+                    validation_result = self.xml_validator.generate_and_validate_selectors(element, validate_immediately=True)
+                    
+                    if validation_result['valid_selectors']:
+                        element_data['xml_selectors'] = validation_result['valid_selectors']
+                        element_data['xml_selectors_legacy'] = self.xml_generator.generate_robust_selector(element)
+                        element_data['validation_report'] = {
+                            'total_generated': len(validation_result['valid_selectors']) + len(validation_result['invalid_selectors']),
+                            'total_valid': len(validation_result['valid_selectors']),
+                            'validation_time': validation_result['validation_time'],
+                            'generation_time': validation_result['generation_time']
+                        }
+                        print_success(f"✓ {len(validation_result['valid_selectors'])} seletores validados automaticamente")
+                    else:
+                        print_warning("Nenhum seletor validado - usando seletores tradicionais")
+                        element_data['xml_selectors'] = self.xml_generator.generate_robust_selector(element)
+                        element_data['validation_report'] = {'error': 'Falha na validação automática'}
+                else:
+                    print_info("Gerando seletores XML tradicionais...")
+                    element_data['xml_selectors'] = self.xml_generator.generate_robust_selector(element)
             
             # Extrai informações da janela
             window_info = self._extract_window_info(element)
@@ -988,16 +1031,42 @@ class ElementInspector:
         if supported:
             print_colored(f"Padrões suportados: {', '.join(supported)}", Fore.GREEN)
         
-        # Exibe primeiro seletor XML
-        selectors = element_data.get('xml_selectors', [])
-        if selectors:
-            print_colored("Seletor XML principal:", Fore.MAGENTA)
-            print_colored(selectors[0], Fore.WHITE)
+        # Exibe seletor ultra-robusto se disponível
+        ultra_robust_selector = element_data.get('xml_selector_ultra_robust')
+        if ultra_robust_selector:
+            print()
+            print_colored("🎯 SELETOR XML ULTRA-ROBUSTO:", Fore.MAGENTA)
+            print_colored(ultra_robust_selector, Fore.WHITE)
             
-        # Exibe informações de validação se disponíveis
-        validation_report = element_data.get('validation_report', {})
-        if validation_report and 'total_valid' in validation_report:
-            print_colored(f"Validação: {validation_report['total_valid']}/{validation_report['total_generated']} seletores válidos", Fore.GREEN)
+            # Exibe metadata do seletor ultra-robusto
+            metadata = element_data.get('ultra_robust_metadata', {})
+            if metadata:
+                reliability = metadata.get('reliability_score', 0)
+                strategy = metadata.get('recommended_strategy', 'N/A')
+                print_colored(f"🏆 Confiabilidade: {reliability:.1f}% | Estratégia: {strategy}", Fore.GREEN)
+            
+            # Exibe análise de estabilidade
+            stability_report = element_data.get('stability_report', {})
+            if stability_report.get('recommendations'):
+                print_colored("💡 Recomendações:", Fore.CYAN)
+                for rec in stability_report['recommendations'][:2]:  # Mostra apenas as 2 primeiras
+                    print_colored(f"  • {rec}", Fore.WHITE)
+                    
+            if stability_report.get('warnings'):
+                print_colored("⚠️ Avisos:", Fore.YELLOW)
+                for warning in stability_report['warnings'][:1]:  # Mostra apenas o primeiro
+                    print_colored(f"  • {warning}", Fore.YELLOW)
+        else:
+            # Fallback para seletores tradicionais
+            selectors = element_data.get('xml_selectors', [])
+            if selectors:
+                print_colored("Seletor XML principal:", Fore.MAGENTA)
+                print_colored(selectors[0], Fore.WHITE)
+                
+            # Exibe informações de validação se disponíveis
+            validation_report = element_data.get('validation_report', {})
+            if validation_report and 'total_valid' in validation_report:
+                print_colored(f"Validação: {validation_report['total_valid']}/{validation_report['total_generated']} seletores válidos", Fore.GREEN)
     
     def test_xml_selector(self, xml_selector):
         """
@@ -1054,11 +1123,11 @@ class ElementInspector:
         Returns:
             dict: Resultado da execução
         """
-        print_info(f"Executando ação '{action_type}' via seletor XML...")
+        print_info(f"🎯 Executando ação '{action_type}' via seletor XML ultra-robusto...")
         
         try:
-            # Usa o executor do validador para execução de ação
-            result = self.xml_validator.executor.execute_click_action(
+            # Usa o executor do ultra-robusto que tem melhor compatibilidade
+            result = self.ultra_robust_generator.executor.execute_click_action(
                 xml_selector, 
                 action_type=action_type,
                 timeout=5

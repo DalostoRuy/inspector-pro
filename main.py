@@ -39,8 +39,9 @@ class UIInspectorApp:
         Banner com título e informações sobre a ferramenta
         """
         print_colored("=" * 70, Fore.CYAN)
-        print_colored("                    UI INSPECTOR v2.0", Fore.YELLOW)
+        print_colored("                    UI INSPECTOR v3.0", Fore.YELLOW)
         print_colored("              Inspetor de Elementos Windows Desktop", Fore.WHITE)
+        print_colored("                🎯 COM SELETORES ULTRA-ROBUSTOS 🎯", Fore.GREEN)
         print_colored("                    Powered by UIA3", Fore.GREEN)
         print_colored("=" * 70, Fore.CYAN)
         print()
@@ -99,6 +100,11 @@ class UIInspectorApp:
         print_warning("INSTRUÇÕES:")
         print_colored("• CTRL + Click no elemento para capturar", Fore.WHITE)
         print_colored("• ESC para cancelar", Fore.WHITE)
+        print()
+        print_colored("🎯 NOVO: Geração automática de seletores ULTRA-ROBUSTOS!", Fore.GREEN)
+        print_colored("   • Análise de estabilidade de atributos", Fore.CYAN)
+        print_colored("   • Múltiplas estratégias de fallback", Fore.CYAN)
+        print_colored("   • Resistente a mudanças de AutomationId", Fore.CYAN)
         print()
         
         # Inicia captura imediatamente

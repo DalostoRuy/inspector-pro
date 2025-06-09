@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Inspector Pro is a Windows desktop UI automation tool for RPA development. It captures detailed UI element information using UIA3 (UI Automation) technology and generates functional XML selectors for automation scripts.
+Inspector Pro v3.0 is a Windows desktop UI automation tool for RPA development. It captures detailed UI element information using UIA3 (UI Automation) technology and generates **ULTRA-ROBUST XML selectors** for automation scripts that work even when AutomationId changes between executions.
 
 ## Running the Application
 
@@ -26,25 +26,34 @@ The application requires Windows and uses Win32 APIs extensively. It will exit w
 The codebase follows a modular architecture with clear separation of concerns:
 
 ### Main Application Flow
-- `main.py` → `ElementInspector` → `XMLSelectorValidator` → `XMLSelectorGenerator` + `XMLSelectorExecutor`
+- `main.py` → `ElementInspector` → `UltraRobustSelectorGenerator` → `XMLSelectorValidator` → `XMLSelectorGenerator` + `XMLSelectorExecutor`
 
 ### Key Components
 
 **UIInspectorApp (main.py)**
-- CLI interface and menu system
-- Coordinates user workflows (capture, list, test)
+- CLI interface and menu system (v3.0 with ultra-robust features)
+- Coordinates user workflows (capture, list, test with action execution)
 - Integrates all components through ElementInspector
 
 **ElementInspector (element_inspector.py)**
 - Core capture engine using Win32 APIs and uiautomation
+- **NEW v3.0**: Automatic ultra-robust selector generation during capture
 - Supports two capture modes: single element and anchor+relative click
 - Integrates automatic selector validation during capture
 - Uses CTRL+Click and CTRL+SHIFT+Click for different capture modes
 
-**XML Selector System (3-component architecture)**
-- `XMLSelectorGenerator`: Creates multiple selector strategies (AutomationId, Name+Type, hierarchical)
-- `XMLSelectorExecutor`: Parses and executes XML selectors against live UI
-- `XMLSelectorValidator`: Combines generation and execution for automatic validation
+**Ultra-Robust XML Selector System (NEW v3.0)**
+- `UltraRobustSelectorGenerator`: **Main innovation** - analyzes attribute stability and generates multiple fallback strategies
+- `XMLSelectorValidator`: Validates and ranks selector strategies by reliability
+- `XMLSelectorExecutor`: Executes XML selectors with multiple click methods (InvokePattern, direct, coordinates)
+- `XMLSelectorGenerator`: Legacy generator (kept for compatibility)
+
+**NEW Ultra-Robust Features:**
+- **Attribute Stability Analysis**: Detects if AutomationId is dynamic vs stable
+- **Multiple Strategy Generation**: Name+Hierarchy, ClassName+Index, Visual Anchors, Coordinate fallbacks
+- **Automatic Validation**: Tests each strategy immediately during capture
+- **Reliability Scoring**: Rates selectors 0-100% with detailed classification
+- **Fallback Cascading**: Multiple strategies embedded in generated XML
 
 ### Data Flow
 
