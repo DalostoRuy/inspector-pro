@@ -1,0 +1,197 @@
+{
+  "automation_id": "397250",
+  "name": "",
+  "class_name": "TDBEdit",
+  "control_type": "EditControl",
+  "localized_control_type": "editar",
+  "framework_id": "Win32",
+  "framework_type": "Win32",
+  "process_id": 10352,
+  "runtime_id": [],
+  "is_enabled": true,
+  "is_visible": true,
+  "is_keyboard_focusable": true,
+  "has_keyboard_focus": true,
+  "is_content_element": true,
+  "is_control_element": true,
+  "bounding_rectangle": {
+    "left": 666,
+    "top": 290,
+    "right": 744,
+    "bottom": 311,
+    "width": 78,
+    "height": 21
+  },
+  "process_info": {
+    "name": "aLegislativo.exe",
+    "exe": "C:\\SistemasAssesi\\aLegislativo\\aLegislativo.exe",
+    "cmdline": "C:\\SistemasAssesi\\aLegislativo\\aLegislativo.exe Deuséfiel",
+    "create_time": "2025-06-09T20:58:26.436569",
+    "memory_info": {
+      "rss": 32694272,
+      "vms": 389988352,
+      "num_page_faults": 281376,
+      "peak_wset": 383963136,
+      "wset": 32694272,
+      "peak_paged_pool": 684248,
+      "paged_pool": 679032,
+      "peak_nonpaged_pool": 206000,
+      "nonpaged_pool": 79736,
+      "pagefile": 389988352,
+      "peak_pagefile": 393236480,
+      "private": 389988352
+    }
+  },
+  "value": "09/06/2025",
+  "parent_info": {
+    "automation_id": "526548",
+    "name": "Informações principais da matéria",
+    "class_name": "TGroupBox",
+    "control_type": "PaneControl"
+  },
+  "children_count": 0,
+  "window_info": {
+    "title": "Matérias - Edição\\inclusão",
+    "class_name": "TFrmMateriasEdit",
+    "automation_id": "",
+    "process_id": 10352,
+    "is_modal": false,
+    "is_topmost": "<bound method TopLevel.IsTopmost of <WindowControl ClassName='TFrmMateriasEdit' AutomationId= Rect=(462,210,1458,869)[996x659] Name='Matérias - Edição\\\\inclusão' Handle=0x2905BC(2688444)>>",
+    "window_rectangle": {
+      "left": 462,
+      "top": 210,
+      "right": 1458,
+      "bottom": 869,
+      "width": 996,
+      "height": 659
+    }
+  },
+  "capture_type": "single_element",
+  "xml_selector_ultra_robust": "<Selector><Element error=\"Nenhuma estratégia válida\" /></Selector>",
+  "ultra_robust_metadata": {
+    "generated_at": "2025-06-09T21:36:32.272020",
+    "generation_time": 10.917145013809204,
+    "reliability_score": 0.0,
+    "recommended_strategy": "none"
+  },
+  "stability_analysis": {
+    "name": {
+      "score": 0.0,
+      "reason": "Atributo vazio"
+    },
+    "control_type": {
+      "score": 1.0,
+      "value": "EditControl",
+      "base_weight": 1.0,
+      "recommended": true
+    },
+    "class_name": {
+      "score": 0.8,
+      "value": "TDBEdit",
+      "base_weight": 0.8,
+      "recommended": true
+    },
+    "automation_id": {
+      "score": 0.6,
+      "value": "397250",
+      "base_weight": 0.3,
+      "recommended": false
+    },
+    "localized_control_type": {
+      "score": 0.7,
+      "value": "editar",
+      "base_weight": 0.7,
+      "recommended": true
+    },
+    "framework_id": {
+      "score": 0.6,
+      "value": "Win32",
+      "base_weight": 0.6,
+      "recommended": false
+    },
+    "window_title": {
+      "score": 0.0,
+      "reason": "Atributo vazio"
+    },
+    "parent_info": {
+      "score": 0.0,
+      "reason": "Atributo vazio"
+    }
+  },
+  "available_strategies": [],
+  "stability_report": {
+    "summary": {
+      "name": {
+        "score": 0.0,
+        "classification": "PÉSSIMA",
+        "value": ""
+      },
+      "control_type": {
+        "score": 1.0,
+        "classification": "EXCELENTE",
+        "value": "EditControl"
+      },
+      "class_name": {
+        "score": 0.8,
+        "classification": "BOA",
+        "value": "TDBEdit"
+      },
+      "automation_id": {
+        "score": 0.6,
+        "classification": "MODERADA",
+        "value": "397250"
+      },
+      "localized_control_type": {
+        "score": 0.7,
+        "classification": "BOA",
+        "value": "editar"
+      },
+      "framework_id": {
+        "score": 0.6,
+        "classification": "MODERADA",
+        "value": "Win32"
+      },
+      "window_title": {
+        "score": 0.0,
+        "classification": "PÉSSIMA",
+        "value": ""
+      },
+      "parent_info": {
+        "score": 0.0,
+        "classification": "PÉSSIMA",
+        "value": ""
+      }
+    },
+    "recommendations": [
+      "Atributos mais estáveis encontrados: control_type, class_name, localized_control_type",
+      "ClassName 'TDBEdit' é confiável para uso hierárquico"
+    ],
+    "warnings": []
+  },
+  "xml_selectors_backup": [
+    "<Selector><Element automationId=\"397250\" controlType=\"EditControl\" /></Selector>"
+  ],
+  "target_window_detection": {
+    "likely_opens_window": false
+  },
+  "supported_patterns": {
+    "InvokePattern": false,
+    "ValuePattern": {
+      "supported": true,
+      "value": "09/06/2025",
+      "is_read_only": false
+    },
+    "TextPattern": false,
+    "TogglePattern": false,
+    "SelectionPattern": false,
+    "SelectionItemPattern": false,
+    "ExpandCollapsePattern": false,
+    "ScrollPattern": false,
+    "GridPattern": false,
+    "TablePattern": false,
+    "WindowPattern": false,
+    "TransformPattern": false,
+    "RangeValuePattern": false
+  },
+  "captured_at": "2025-06-09T21:36:42.268247"
+}

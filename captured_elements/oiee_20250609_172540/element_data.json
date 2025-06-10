@@ -1,0 +1,206 @@
+{
+  "automation_id": "1114754",
+  "name": "&Incluir",
+  "class_name": "TcxButton",
+  "control_type": "ButtonControl",
+  "localized_control_type": "botão",
+  "framework_id": "Win32",
+  "framework_type": "Win32",
+  "process_id": 13056,
+  "runtime_id": [],
+  "is_enabled": true,
+  "is_visible": true,
+  "is_keyboard_focusable": true,
+  "has_keyboard_focus": false,
+  "is_content_element": true,
+  "is_control_element": true,
+  "bounding_rectangle": {
+    "left": 24,
+    "top": 964,
+    "right": 114,
+    "bottom": 989,
+    "width": 90,
+    "height": 25
+  },
+  "process_info": {
+    "name": "aLegislativo.exe",
+    "exe": "C:\\SistemasAssesi\\aLegislativo\\aLegislativo.exe",
+    "cmdline": "C:\\SistemasAssesi\\aLegislativo\\aLegislativo.exe Deuséfiel",
+    "create_time": "2025-06-09T17:15:14.525898",
+    "memory_info": {
+      "rss": 33636352,
+      "vms": 388829184,
+      "num_page_faults": 230547,
+      "peak_wset": 386564096,
+      "wset": 33636352,
+      "peak_paged_pool": 682264,
+      "paged_pool": 677048,
+      "peak_nonpaged_pool": 140400,
+      "nonpaged_pool": 79192,
+      "pagefile": 388829184,
+      "peak_pagefile": 393437184,
+      "private": 388829184
+    }
+  },
+  "value": "&Incluir",
+  "parent_info": {
+    "automation_id": "396918",
+    "name": "",
+    "class_name": "TPanel",
+    "control_type": "PaneControl"
+  },
+  "children_count": 0,
+  "window_info": {
+    "title": "Software para controle e apoio às Câmaras de Vereadores - aTecnologia",
+    "class_name": "TFrmPrincipal",
+    "automation_id": "",
+    "process_id": 13056,
+    "is_modal": false,
+    "is_topmost": "<bound method TopLevel.IsTopmost of <WindowControl ClassName='TFrmPrincipal' AutomationId= Rect=(-8,-8,1928,1040)[1936x1048] Name='Software para controle e apoio às Câmaras de Vereadores - aTecnologia' Handle=0x30F34(200500)>>",
+    "window_rectangle": {
+      "left": -8,
+      "top": -8,
+      "right": 1928,
+      "bottom": 1040,
+      "width": 1936,
+      "height": 1048
+    }
+  },
+  "capture_type": "single_element",
+  "xml_selector_ultra_robust": "<Selector><Element error=\"Nenhuma estratégia válida\" /></Selector>",
+  "ultra_robust_metadata": {
+    "generated_at": "2025-06-09T17:25:27.491903",
+    "generation_time": 12.924405813217163,
+    "reliability_score": 0.0,
+    "recommended_strategy": "none"
+  },
+  "stability_analysis": {
+    "name": {
+      "score": 0.85,
+      "value": "&Incluir",
+      "base_weight": 0.9,
+      "recommended": true
+    },
+    "control_type": {
+      "score": 1.0,
+      "value": "ButtonControl",
+      "base_weight": 1.0,
+      "recommended": true
+    },
+    "class_name": {
+      "score": 0.9,
+      "value": "TcxButton",
+      "base_weight": 0.8,
+      "recommended": true
+    },
+    "automation_id": {
+      "score": 0.6,
+      "value": "1114754",
+      "base_weight": 0.3,
+      "recommended": false
+    },
+    "localized_control_type": {
+      "score": 0.7,
+      "value": "botão",
+      "base_weight": 0.7,
+      "recommended": true
+    },
+    "framework_id": {
+      "score": 0.6,
+      "value": "Win32",
+      "base_weight": 0.6,
+      "recommended": false
+    },
+    "window_title": {
+      "score": 0.0,
+      "reason": "Atributo vazio"
+    },
+    "parent_info": {
+      "score": 0.0,
+      "reason": "Atributo vazio"
+    }
+  },
+  "available_strategies": [],
+  "stability_report": {
+    "summary": {
+      "name": {
+        "score": 0.85,
+        "classification": "BOA",
+        "value": "&Incluir"
+      },
+      "control_type": {
+        "score": 1.0,
+        "classification": "EXCELENTE",
+        "value": "ButtonControl"
+      },
+      "class_name": {
+        "score": 0.9,
+        "classification": "EXCELENTE",
+        "value": "TcxButton"
+      },
+      "automation_id": {
+        "score": 0.6,
+        "classification": "MODERADA",
+        "value": "1114754"
+      },
+      "localized_control_type": {
+        "score": 0.7,
+        "classification": "BOA",
+        "value": "botão"
+      },
+      "framework_id": {
+        "score": 0.6,
+        "classification": "MODERADA",
+        "value": "Win32"
+      },
+      "window_title": {
+        "score": 0.0,
+        "classification": "PÉSSIMA",
+        "value": ""
+      },
+      "parent_info": {
+        "score": 0.0,
+        "classification": "PÉSSIMA",
+        "value": ""
+      }
+    },
+    "recommendations": [
+      "Atributos mais estáveis encontrados: name, control_type, class_name, localized_control_type",
+      "Name '&Incluir' é muito estável - recomendado como atributo principal",
+      "ClassName 'TcxButton' é confiável para uso hierárquico"
+    ],
+    "warnings": []
+  },
+  "xml_selectors_backup": [
+    "<Selector><Element automationId=\"1114754\" controlType=\"ButtonControl\" /></Selector>"
+  ],
+  "target_window_detection": {
+    "likely_opens_window": true,
+    "control_type": "ButtonControl",
+    "button_text": "&Incluir",
+    "detection_hints": [
+      "Este elemento provavelmente abre uma janela quando clicado",
+      "Considere capturar a janela de destino separadamente",
+      "Use o nome da janela de destino no seletor quando automatizar",
+      "Para automação robusta, implemente espera pela janela aparecer"
+    ]
+  },
+  "supported_patterns": {
+    "InvokePattern": {
+      "supported": true
+    },
+    "ValuePattern": false,
+    "TextPattern": false,
+    "TogglePattern": false,
+    "SelectionPattern": false,
+    "SelectionItemPattern": false,
+    "ExpandCollapsePattern": false,
+    "ScrollPattern": false,
+    "GridPattern": false,
+    "TablePattern": false,
+    "WindowPattern": false,
+    "TransformPattern": false,
+    "RangeValuePattern": false
+  },
+  "captured_at": "2025-06-09T17:25:40.645358"
+}

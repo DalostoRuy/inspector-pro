@@ -11,6 +11,7 @@ import uiautomation as auto
 from xml_selector_generator import XMLSelectorGenerator
 from xml_selector_validator import XMLSelectorValidator
 from xml_selector_ultra_robust import UltraRobustSelectorGenerator
+from xml_selector_optimized import OptimizedSelectorGenerator
 from utils import *
 
 # Importação opcional para debug avançado
@@ -33,6 +34,7 @@ class ElementInspector:
         self.xml_generator = XMLSelectorGenerator()
         self.xml_validator = XMLSelectorValidator()
         self.ultra_robust_generator = UltraRobustSelectorGenerator()
+        self.optimized_generator = OptimizedSelectorGenerator()  # Novo gerador otimizado
         self.is_capturing = False
         self.captured_element = None
         self.mouse_hook = None
@@ -495,9 +497,22 @@ class ElementInspector:
             element_data = self._extract_element_properties(element)
             element_data['capture_type'] = 'single_element'  # Marca tipo de captura
             
-            # Gera seletores XML ultra-robustos
-            if self.enable_ultra_robust:
-                print_info("🎯 Gerando seletor XML ULTRA-ROBUSTO...")
+            # Tenta primeiro o gerador otimizado (mais efetivo)
+            print_info("🎯 Tentando gerador OTIMIZADO primeiro...")
+            optimized_result = self.optimized_generator.generate_optimized_selector(element)
+            
+            if optimized_result and optimized_result['generation_metadata']['strategies_working'] > 0:
+                # Sucesso com gerador otimizado
+                element_data['xml_selector_optimized'] = optimized_result['optimized_selector']
+                element_data['optimized_metadata'] = optimized_result['generation_metadata']
+                element_data['working_selectors'] = optimized_result['working_selectors']
+                element_data['element_analysis'] = optimized_result['element_analysis']
+                
+                reliability_score = optimized_result['generation_metadata']['reliability_score']
+                working_count = optimized_result['generation_metadata']['strategies_working']
+                print_success(f"✅ Gerador otimizado funcionou: {working_count} estratégias, {reliability_score:.1f}% confiabilidade!")
+            elif self.enable_ultra_robust:
+                print_warning("⚠️ Gerador otimizado falhou - tentando ultra-robusto...")
                 
                 ultra_robust_result = self.ultra_robust_generator.generate_ultra_robust_selector(element)
                 
@@ -527,12 +542,11 @@ class ElementInspector:
                         element_data['xml_selectors_backup'] = self.xml_generator.generate_robust_selector(element)
                         
                 else:
-                    print_warning("⚠️ Falha na geração ultra-robusta - usando método tradicional")
-                    # Fallback para método tradicional
+                    print_warning("⚠️ Ultra-robusto também falhou - usando método tradicional")
+                    # Fallback final para método tradicional
                     if self.enable_validation:
                         validation_result = self.xml_validator.generate_and_validate_selectors(element, validate_immediately=True)
                         element_data['xml_selectors'] = validation_result.get('valid_selectors', [])
-                        element_data['xml_selectors_legacy'] = self.xml_generator.generate_robust_selector(element)
                     else:
                         element_data['xml_selectors'] = self.xml_generator.generate_robust_selector(element)
             else:
@@ -1031,9 +1045,32 @@ class ElementInspector:
         if supported:
             print_colored(f"Padrões suportados: {', '.join(supported)}", Fore.GREEN)
         
-        # Exibe seletor ultra-robusto se disponível
-        ultra_robust_selector = element_data.get('xml_selector_ultra_robust')
-        if ultra_robust_selector:
+        # Exibe seletor otimizado se disponível (prioridade sobre ultra-robusto)
+        optimized_selector = element_data.get('xml_selector_optimized')
+        if optimized_selector:
+            print()
+            print_colored("🎯 SELETOR XML OTIMIZADO:", Fore.GREEN)
+            print_colored(optimized_selector, Fore.WHITE)
+            
+            # Exibe metadata do seletor otimizado
+            optimized_metadata = element_data.get('optimized_metadata', {})
+            if optimized_metadata:
+                reliability = optimized_metadata.get('reliability_score', 0)
+                working_strategies = optimized_metadata.get('strategies_working', 0)
+                tested_strategies = optimized_metadata.get('strategies_tested', 0)
+                print_colored(f"🏆 Confiabilidade: {reliability:.1f}% | Estratégias funcionando: {working_strategies}/{tested_strategies}", Fore.GREEN)
+            
+            # Exibe estratégias funcionando
+            working_selectors = element_data.get('working_selectors', [])
+            if working_selectors:
+                print_colored("✅ Estratégias funcionando:", Fore.CYAN)
+                for i, selector in enumerate(working_selectors[:3], 1):  # Mostra as 3 melhores
+                    exec_time = selector.get('execution_time', 0)
+                    print_colored(f"  {i}. {selector['description']} ({exec_time:.2f}s)", Fore.WHITE)
+                    
+        # Exibe seletor ultra-robusto se disponível e não houver otimizado
+        elif element_data.get('xml_selector_ultra_robust'):
+            ultra_robust_selector = element_data.get('xml_selector_ultra_robust')
             print()
             print_colored("🎯 SELETOR XML ULTRA-ROBUSTO:", Fore.MAGENTA)
             print_colored(ultra_robust_selector, Fore.WHITE)

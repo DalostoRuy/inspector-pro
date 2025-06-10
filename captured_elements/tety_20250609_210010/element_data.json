@@ -1,0 +1,158 @@
+{
+  "automation_id": "3343292",
+  "name": "&Incluir",
+  "class_name": "TcxButton",
+  "control_type": "ButtonControl",
+  "localized_control_type": "botão",
+  "framework_id": "Win32",
+  "framework_type": "Win32",
+  "process_id": 10352,
+  "runtime_id": [],
+  "is_enabled": true,
+  "is_visible": true,
+  "is_keyboard_focusable": true,
+  "has_keyboard_focus": false,
+  "is_content_element": true,
+  "is_control_element": true,
+  "bounding_rectangle": {
+    "left": 24,
+    "top": 964,
+    "right": 114,
+    "bottom": 989,
+    "width": 90,
+    "height": 25
+  },
+  "process_info": {
+    "name": "aLegislativo.exe",
+    "exe": "C:\\SistemasAssesi\\aLegislativo\\aLegislativo.exe",
+    "cmdline": "C:\\SistemasAssesi\\aLegislativo\\aLegislativo.exe Deuséfiel",
+    "create_time": "2025-06-09T20:58:26.436569",
+    "memory_info": {
+      "rss": 46825472,
+      "vms": 388608000,
+      "num_page_faults": 218140,
+      "peak_wset": 383963136,
+      "wset": 46825472,
+      "peak_paged_pool": 677368,
+      "paged_pool": 677272,
+      "peak_nonpaged_pool": 206000,
+      "nonpaged_pool": 79672,
+      "pagefile": 388608000,
+      "peak_pagefile": 393236480,
+      "private": 388608000
+    }
+  },
+  "value": "&Incluir",
+  "parent_info": {
+    "automation_id": "526384",
+    "name": "",
+    "class_name": "TPanel",
+    "control_type": "PaneControl"
+  },
+  "children_count": 0,
+  "window_info": {
+    "title": "Software para controle e apoio às Câmaras de Vereadores - aTecnologia",
+    "class_name": "TFrmPrincipal",
+    "automation_id": "",
+    "process_id": 10352,
+    "is_modal": false,
+    "is_topmost": "<bound method TopLevel.IsTopmost of <WindowControl ClassName='TFrmPrincipal' AutomationId= Rect=(-8,-8,1928,1040)[1936x1048] Name='Software para controle e apoio às Câmaras de Vereadores - aTecnologia' Handle=0xA080C(657420)>>",
+    "window_rectangle": {
+      "left": -8,
+      "top": -8,
+      "right": 1928,
+      "bottom": 1040,
+      "width": 1936,
+      "height": 1048
+    }
+  },
+  "capture_type": "single_element",
+  "xml_selector_optimized": "<!-- Seletor Otimizado - 2025-06-09 21:00:10 -->\n<!-- Estratégia: Name + ControlType -->\n<!-- Tempo de execução: 1.12s -->\n<!-- Alternativas disponíveis: 2 -->\n\n<Selector><Element name=\"&amp;Incluir\" controlType=\"ButtonControl\" /></Selector>",
+  "optimized_metadata": {
+    "generated_at": "2025-06-09T21:00:10.699977",
+    "generation_time": 6.600900173187256,
+    "reliability_score": 100.0,
+    "strategies_tested": 5,
+    "strategies_working": 3
+  },
+  "working_selectors": [
+    {
+      "name": "name_control_type",
+      "xml": "<Selector><Element name=\"&amp;Incluir\" controlType=\"ButtonControl\" /></Selector>",
+      "priority": 1,
+      "description": "Name + ControlType",
+      "execution_time": 1.1239650249481201,
+      "validation_status": "working",
+      "validation_message": "Elemento encontrado e verificado"
+    },
+    {
+      "name": "automation_id_simple",
+      "xml": "<Selector><Element automationId=\"3343292\" controlType=\"ButtonControl\" /></Selector>",
+      "priority": 2,
+      "description": "AutomationId direto",
+      "execution_time": 0.9915554523468018,
+      "validation_status": "working",
+      "validation_message": "Elemento encontrado e verificado"
+    },
+    {
+      "name": "mixed_attributes",
+      "xml": "<Selector><Element name=\"&amp;Incluir\" className=\"TcxButton\" controlType=\"ButtonControl\" /></Selector>",
+      "priority": 4,
+      "description": "Múltiplos atributos",
+      "execution_time": 0.9396941661834717,
+      "validation_status": "working",
+      "validation_message": "Elemento encontrado e verificado"
+    }
+  ],
+  "element_analysis": {
+    "automation_id": "3343292",
+    "name": "&Incluir",
+    "class_name": "TcxButton",
+    "control_type": "ButtonControl",
+    "localized_control_type": "botão",
+    "framework_id": "Win32",
+    "value": "",
+    "is_enabled": true,
+    "window": {
+      "title": "",
+      "class_name": "",
+      "automation_id": ""
+    },
+    "attribute_scores": {
+      "name": 0.9,
+      "control_type": 1.0,
+      "class_name": 0.95,
+      "automation_id": 0.6,
+      "window_title": 0.0
+    }
+  },
+  "target_window_detection": {
+    "likely_opens_window": true,
+    "control_type": "ButtonControl",
+    "button_text": "&Incluir",
+    "detection_hints": [
+      "Este elemento provavelmente abre uma janela quando clicado",
+      "Considere capturar a janela de destino separadamente",
+      "Use o nome da janela de destino no seletor quando automatizar",
+      "Para automação robusta, implemente espera pela janela aparecer"
+    ]
+  },
+  "supported_patterns": {
+    "InvokePattern": {
+      "supported": true
+    },
+    "ValuePattern": false,
+    "TextPattern": false,
+    "TogglePattern": false,
+    "SelectionPattern": false,
+    "SelectionItemPattern": false,
+    "ExpandCollapsePattern": false,
+    "ScrollPattern": false,
+    "GridPattern": false,
+    "TablePattern": false,
+    "WindowPattern": false,
+    "TransformPattern": false,
+    "RangeValuePattern": false
+  },
+  "captured_at": "2025-06-09T21:00:10.729427"
+}

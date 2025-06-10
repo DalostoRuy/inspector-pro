@@ -285,13 +285,25 @@ class XMLSelectorExecutor:
         """
         criteria = dict(element_criteria.attrib)
         
-        # Estratégias de busca em ordem de prioridade
+        # Estratégias de busca reordenadas - prioriza ClassName quando Name vazio
+        name_value = criteria.get('name', '')
+        
+        # Prioridade 1: AutomationId (quando disponível)
         if 'automationId' in criteria:
             return self._find_by_automation_id(parent_element, criteria, timeout)
-        elif 'name' in criteria and 'controlType' in criteria:
+        
+        # Prioridade 2: ClassName quando Name está vazio (campos Delphi)
+        elif 'className' in criteria and not name_value:
+            return self._find_by_class_name(parent_element, criteria, timeout)
+        
+        # Prioridade 3: Name + ControlType quando Name existe
+        elif 'name' in criteria and 'controlType' in criteria and name_value:
             return self._find_by_name_and_type(parent_element, criteria, timeout)
+        
+        # Prioridade 4: ClassName geral
         elif 'className' in criteria:
             return self._find_by_class_name(parent_element, criteria, timeout)
+        
         else:
             # Busca genérica por qualquer critério disponível
             return self._find_by_any_criteria(parent_element, criteria, timeout)
@@ -349,7 +361,7 @@ class XMLSelectorExecutor:
     
     def _find_by_class_name(self, parent, criteria, timeout):
         """
-        Busca elemento por ClassName
+        Busca elemento por ClassName com contexto de janela melhorado
         """
         class_name = criteria['className']
         control_type = criteria.get('controlType', '')
@@ -358,7 +370,7 @@ class XMLSelectorExecutor:
         
         while time.time() < end_time:
             try:
-                # Busca por ClassName
+                # Método 1: Busca direta por ClassName
                 element = parent.Control(ClassName=class_name)
                 
                 if element and element.Exists(0):
@@ -366,6 +378,22 @@ class XMLSelectorExecutor:
                     if control_type and getattr(element, 'ControlTypeName', '') != control_type:
                         continue
                     return element
+                
+                # Método 2: Busca hierárquica para campos Delphi
+                if class_name.startswith(('TDB', 'TEdit', 'Tcx')):
+                    children = parent.GetChildren()
+                    for child in children:
+                        if (getattr(child, 'ClassName', '') == class_name and
+                            (not control_type or getattr(child, 'ControlTypeName', '') == control_type)):
+                            return child
+                        
+                        # Busca recursiva em containers (TGroupBox, TPanel)
+                        if getattr(child, 'ClassName', '').startswith(('TGroup', 'TPanel')):
+                            grandchildren = child.GetChildren()
+                            for grandchild in grandchildren:
+                                if (getattr(grandchild, 'ClassName', '') == class_name and
+                                    (not control_type or getattr(grandchild, 'ControlTypeName', '') == control_type)):
+                                    return grandchild
                     
             except Exception:
                 pass
