@@ -106,9 +106,24 @@ class OptimizedSelectorGenerator:
                 'framework_id': getattr(element, 'FrameworkId', '') or '',
                 'value': getattr(element, 'Value', '') or '',
                 'is_enabled': getattr(element, 'IsEnabled', True),
-                'window': window_info
+                'window': window_info,
+                'legacy_accessible_name': '',
+                'legacy_accessible_description': '',
+                'legacy_accessible_role_string': ''
             }
-            
+
+            # Extrair informações do LegacyIAccessiblePattern
+            try:
+                legacy_pattern = element.GetLegacyIAccessiblePattern()
+                if legacy_pattern:
+                    element_data['legacy_accessible_name'] = legacy_pattern.Name or ''
+                    element_data['legacy_accessible_description'] = legacy_pattern.Description or ''
+                    element_data['legacy_accessible_role_string'] = legacy_pattern.RoleString or ''
+            except Exception as e:
+                # Silenciosamente ignora se o padrão não for suportado ou ocorrer outro erro
+                # print_warning(f"Não foi possível obter LegacyIAccessiblePattern: {str(e)}")
+                pass
+
             # Calcula score de utilidade para cada atributo
             element_data['attribute_scores'] = self._score_attributes(element_data)
             
@@ -191,6 +206,15 @@ class OptimizedSelectorGenerator:
         # Window title - crucial para contexto Delphi
         window_title = element_data.get('window', {}).get('title', '')
         scores['window_title'] = 0.9 if window_title and is_delphi_app else 0.85 if window_title else 0.0
+
+        # LegacyAccessibleName - pode ser muito útil se vier de um label
+        legacy_name = element_data.get('legacy_accessible_name', '')
+        if legacy_name and not legacy_name.isdigit() and len(legacy_name) > 2:
+            scores['legacy_accessible_name'] = 0.9
+        elif legacy_name:
+            scores['legacy_accessible_name'] = 0.5 # Menos útil se for numérico ou curto
+        else:
+            scores['legacy_accessible_name'] = 0.0
         
         return scores
     
@@ -242,67 +266,97 @@ class OptimizedSelectorGenerator:
     def _generate_working_selectors(self, element_info, element):
         """Gera apenas seletores que têm alta chance de funcionar"""
         selectors = []
+
+        # PRIORIDADES ATUALIZADAS:
+        # 0: Label Anchored (via AccessibleName) - Nova, muito alta prioridade se aplicável
+        # 1: Stable Parent + Typed Index - Nova, alta prioridade
+        # 2: Name + ControlType (originalmente 1)
+        # 3: ClassName + Window (originalmente 1 ou 2/3) - Especialmente para Delphi
+        # 4: AutomationId simples (originalmente 2)
+        # 5: Delphi Field Context (originalmente 2)
+        # 6: Mixed Attributes (originalmente 4)
+        # 7: Traditional Fallback (originalmente 5)
+
+        # Nova Estratégia: Label Anchored (via AccessibleName)
+        label_anchored_result = self._create_label_anchored_selector(element_info, element)
+        if label_anchored_result:
+            selectors.append({
+                'name': 'label_anchored_accessible_name',
+                'xml': label_anchored_result['xml'],
+                'priority': 0, # Altíssima prioridade
+                'description': label_anchored_result['description']
+            })
+
+        # Nova Estratégia: Stable Parent + Typed Index
+        stable_parent_typed_index_result = self._create_stable_parent_typed_index_selector(element_info, element)
+        if stable_parent_typed_index_result:
+            selectors.append({
+                'name': 'stable_parent_typed_index',
+                'xml': stable_parent_typed_index_result['xml'],
+                'priority': 1, # Alta prioridade
+                'description': stable_parent_typed_index_result['description']
+            })
         
-        # Estratégia 1: Name + ControlType (prioritária quando name existe)
+        # Estratégia: Name + ControlType
         if element_info['attribute_scores'].get('name', 0) >= 0.5:
-            selector1 = self._create_name_control_selector(element_info)
-            if selector1:
+            selector_name_ctrl = self._create_name_control_selector(element_info)
+            if selector_name_ctrl:
                 selectors.append({
                     'name': 'name_control_type',
-                    'xml': selector1,
-                    'priority': 1,
+                    'xml': selector_name_ctrl,
+                    'priority': 2, # Prioridade ajustada
                     'description': 'Name + ControlType'
                 })
         
-        # Estratégia 2: ClassName + Window (PRIORITÁRIA para campos Delphi sem name)
+        # Estratégia: ClassName + Window
         if element_info['attribute_scores'].get('class_name', 0) >= 0.8:
-            selector2 = self._create_class_window_selector(element_info)
-            if selector2:
-                # Prioridade máxima para campos Delphi sem Name
+            selector_class_win = self._create_class_window_selector(element_info)
+            if selector_class_win:
                 is_delphi_field = (element_info.get('class_name', '').startswith(('TDB', 'TEdit', 'Tcx')) and 
                                  not element_info.get('name', ''))
-                priority = 1 if is_delphi_field else (2 if element_info['attribute_scores'].get('name', 0) < 0.5 else 3)
+                # Delphi fields sem nome ainda são muito importantes com ClassName
+                priority = 2 if is_delphi_field else 3 # Prioridade ajustada
                 selectors.append({
                     'name': 'class_name_window',
-                    'xml': selector2,
+                    'xml': selector_class_win,
                     'priority': priority,
                     'description': 'ClassName + Window (Delphi otimizado)' if is_delphi_field else 'ClassName + Window'
                 })
         
-        # Estratégia 3: AutomationId simples (backup)
+        # Estratégia: AutomationId simples
         if element_info['attribute_scores'].get('automation_id', 0) >= 0.6:
-            selector3 = self._create_automation_id_selector(element_info)
-            if selector3:
+            selector_auto_id = self._create_automation_id_selector(element_info)
+            if selector_auto_id:
                 selectors.append({
                     'name': 'automation_id_simple',
-                    'xml': selector3,
-                    'priority': 2,
+                    'xml': selector_auto_id,
+                    'priority': 4, # Prioridade ajustada
                     'description': 'AutomationId direto'
                 })
         
-        # Estratégia 4: Contexto específico Delphi (para campos com Parent info)
+        # Estratégia: Contexto específico Delphi
         if (element_info.get('class_name', '').startswith(('TDB', 'TEdit', 'Tcx')) and 
-            not element_info.get('name', '')):
-            selector4 = self._create_delphi_context_selector(element_info, element)
-            if selector4:
+            not element_info.get('name', '')): # Focado em campos Delphi sem nome explícito
+            selector_delphi_ctx = self._create_delphi_context_selector(element_info, element)
+            if selector_delphi_ctx:
                 selectors.append({
                     'name': 'delphi_field_context',
-                    'xml': selector4,
-                    'priority': 2,  # Alta prioridade para campos Delphi
+                    'xml': selector_delphi_ctx,
+                    'priority': 5,  # Prioridade ajustada
                     'description': 'Contexto Delphi com Parent'
                 })
         
-        # Estratégia 5: Atributos mistos (robusta)
-        selector5 = self._create_mixed_attributes_selector(element_info)
-        if selector5:
+        # Estratégia: Atributos mistos
+        selector_mixed = self._create_mixed_attributes_selector(element_info)
+        if selector_mixed:
             selectors.append({
                 'name': 'mixed_attributes',
-                'xml': selector5,
-                'priority': 4,
+                'xml': selector_mixed,
+                'priority': 6, # Prioridade ajustada
                 'description': 'Múltiplos atributos'
             })
         
-        # Estratégia 6: Fallback com gerador tradicional
+        # Estratégia: Fallback com gerador tradicional
         try:
             traditional_selectors = self.base_generator.generate_robust_selector(element)
             if traditional_selectors and len(traditional_selectors) > 0:
@@ -317,7 +371,161 @@ class OptimizedSelectorGenerator:
         
         print_info(f"📝 Geradas {len(selectors)} estratégias otimizadas")
         return selectors
-    
+
+    def _create_label_anchored_selector(self, element_info, element):
+        """
+        Tenta criar um seletor baseado no LegacyIAccessiblePattern.Name,
+        que frequentemente corresponde ao texto de um label associado.
+        """
+        legacy_name = element_info.get('legacy_accessible_name', '')
+        class_name = element_info.get('class_name', '')
+        control_type = element_info.get('control_type', '')
+        window_title = element_info.get('window', {}).get('title', '')
+
+        # Verifica se o legacy_accessible_name é útil
+        if not legacy_name or legacy_name.isdigit() or len(legacy_name) < 3 or len(legacy_name) > 100:
+            return None
+
+        legacy_name_escaped = self._escape_xml(legacy_name)
+        class_name_escaped = self._escape_xml(class_name)
+
+        xml_parts = []
+
+        if window_title:
+            window_escaped = self._escape_xml(window_title)
+            xml_parts.append(f'<Window title="{window_escaped}" />')
+
+        element_attrs = []
+        if class_name_escaped: # Adiciona className se disponível e útil
+            element_attrs.append(f'className="{class_name_escaped}"')
+        if control_type:
+            element_attrs.append(f'controlType="{control_type}"')
+
+        element_attrs.append(f'accessibleName="{legacy_name_escaped}"') # Novo atributo conceitual
+
+        xml_parts.append(f'<Element {" ".join(element_attrs)} />')
+
+        return {
+            'xml': f'<Selector>{"".join(xml_parts)}</Selector>',
+            'description': 'Label via AccessibleName'
+        }
+
+    def _create_stable_parent_typed_index_selector(self, element_info, element):
+        """
+        Tenta criar um seletor encontrando um pai estável e usando um índice
+        baseado no tipo (ClassName e ControlType) do elemento.
+        """
+        window_title = element_info.get('window', {}).get('title', '')
+        element_class_name = element_info.get('class_name', '')
+        element_control_type = element_info.get('control_type', '')
+
+        if not element_class_name or not element_control_type: # Precisa do tipo do elemento
+            return None
+
+        current = element
+        stable_parent_info = None
+        parent_element = None
+
+        # Navega para cima para encontrar um pai estável (max 3-4 níveis)
+        for _ in range(4):
+            try:
+                parent = current.GetParentControl()
+                if not parent or parent == current:
+                    break
+
+                parent_name = getattr(parent, 'Name', '') or ''
+                parent_automation_id = getattr(parent, 'AutomationId', '') or ''
+                parent_class_name = getattr(parent, 'ClassName', '') or ''
+                parent_control_type = getattr(parent, 'ControlTypeName', '') or ''
+
+                # Critérios de estabilidade do pai
+                is_stable = False
+                parent_attrs_list = []
+
+                if parent_name and not parent_name.isdigit() and len(parent_name) > 2:
+                    is_stable = True
+                    parent_attrs_list.append(f'name="{self._escape_xml(parent_name)}"')
+                elif parent_automation_id and not parent_automation_id.isdigit():
+                    is_stable = True
+                    parent_attrs_list.append(f'automationId="{self._escape_xml(parent_automation_id)}"')
+                elif parent_class_name and not parent_class_name.startswith(('T', 'WindowsForms10')) and \
+                     parent_class_name not in ['Pane', 'Custom'] : # Evitar classes genéricas demais
+                    is_stable = True
+                    parent_attrs_list.append(f'className="{self._escape_xml(parent_class_name)}"')
+
+                if parent_control_type : # ControlType é sempre bom ter
+                     parent_attrs_list.append(f'controlType="{self._escape_xml(parent_control_type)}"')
+
+
+                if is_stable and parent_attrs_list:
+                    stable_parent_info = " ".join(parent_attrs_list)
+                    parent_element = parent
+                    break
+
+                current = parent
+            except Exception: # Problemas ao acessar GetParentControl ou atributos
+                break
+
+        if not stable_parent_info or not parent_element:
+            return None
+
+        # Encontra o índice do elemento entre os filhos do mesmo tipo do pai estável
+        typed_index = -1
+        try:
+            children = parent_element.GetChildren()
+            filtered_children = []
+            for child in children:
+                child_class_name = getattr(child, 'ClassName', '') or ''
+                child_control_type = getattr(child, 'ControlTypeName', '') or ''
+                if child_class_name == element_class_name and child_control_type == element_control_type:
+                    filtered_children.append(child)
+
+            for i, child in enumerate(filtered_children):
+                # Compara AutomationId ou Name para identificar o elemento original
+                # Esta é uma simplificação; uma comparação mais robusta pode ser necessária
+                if (getattr(child, 'AutomationId', '') == element_info.get('automation_id') and
+                    getattr(child, 'Name', '') == element_info.get('name')):
+                    typed_index = i
+                    break
+            # Fallback se não encontrar por ID/Name (p. ex. elementos sem ID/Name únicos)
+            if typed_index == -1 and element in filtered_children:
+                 # This might be risky if elements are identical beyond name/automationId
+                 # A more robust way would be to compare the element objects directly if possible
+                 # For now, we assume the 'element' object is comparable or its position is what we get
+                 # from GetChildren() list.
+                 # Let's try to find by object reference (requires element to be in children)
+                try:
+                    typed_index = [c.AutomationId for c in filtered_children].index(element.AutomationId) # Simplistic
+                except ValueError: # Element not found by AutomationId, try by object ref if possible
+                    # This direct object comparison might not work across different wrappers/proxies
+                    # but it's worth a try if AutomationId is not unique or available
+                    for i, child_ref in enumerate(filtered_children):
+                        if child_ref == element: # This relies on object identity
+                            typed_index = i
+                            break
+
+
+        except Exception: # Erro ao obter filhos ou seus atributos
+            return None
+
+        if typed_index == -1:
+            return None
+
+        xml_parts = []
+        if window_title:
+            window_escaped = self._escape_xml(window_title)
+            xml_parts.append(f'<Window title="{window_escaped}" />')
+
+        # Estrutura aninhada: Pai Estável > Elemento com typedIndex
+        xml_parts.append(f'<Element {stable_parent_info}>')
+        xml_parts.append(f'<Element className="{self._escape_xml(element_class_name)}" controlType="{self._escape_xml(element_control_type)}" typedIndex="{typed_index}" />')
+        xml_parts.append('</Element>') # Fechamento do pai
+
+        return {
+            'xml': f'<Selector>{"".join(xml_parts)}</Selector>',
+            'description': 'Stable Parent + Typed Index'
+        }
+
     def _create_name_control_selector(self, element_info):
         """Cria seletor baseado em Name + ControlType"""
         name = element_info.get('name', '')

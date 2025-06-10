@@ -273,7 +273,8 @@ class XMLSelectorExecutor:
     
     def _find_element(self, parent_element, element_criteria, timeout):
         """
-        Encontra elemento filho baseado nos critérios especificados
+        Encontra elemento filho baseado nos critérios especificados,
+        considerando typedIndex se presente.
         
         Args:
             parent_element: Elemento pai onde buscar
@@ -284,29 +285,62 @@ class XMLSelectorExecutor:
             uiautomation.Control: Elemento encontrado ou None
         """
         criteria = dict(element_criteria.attrib)
+        target_typed_index = -1
+
+        if 'typedIndex' in criteria:
+            try:
+                target_typed_index = int(criteria['typedIndex'])
+                # Remove typedIndex do critério de busca principal, pois ele é aplicado depois
+                # É importante fazer uma cópia de criteria aqui se for modificar
+            except ValueError:
+                self.last_execution_report['steps'].append({
+                    'step': 'find_element_error',
+                    'success': False,
+                    'criteria': dict(element_criteria.attrib),
+                    'error': 'typedIndex inválido (não é um número)'
+                })
+                return None
         
-        # Estratégias de busca reordenadas - prioriza ClassName quando Name vazio
-        name_value = criteria.get('name', '')
-        
-        # Prioridade 1: AutomationId (quando disponível)
-        if 'automationId' in criteria:
-            return self._find_by_automation_id(parent_element, criteria, timeout)
-        
-        # Prioridade 2: ClassName quando Name está vazio (campos Delphi)
-        elif 'className' in criteria and not name_value:
-            return self._find_by_class_name(parent_element, criteria, timeout)
-        
-        # Prioridade 3: Name + ControlType quando Name existe
-        elif 'name' in criteria and 'controlType' in criteria and name_value:
-            return self._find_by_name_and_type(parent_element, criteria, timeout)
-        
-        # Prioridade 4: ClassName geral
-        elif 'className' in criteria:
-            return self._find_by_class_name(parent_element, criteria, timeout)
-        
+        criteria_for_filtering = criteria.copy()
+        if 'typedIndex' in criteria_for_filtering:
+            del criteria_for_filtering['typedIndex']
+
+        # Se typedIndex é especificado, precisamos de todos os elementos que correspondem aos outros critérios.
+        if target_typed_index >= 0:
+            # Usamos _find_by_any_criteria com find_all=True para obter todos os candidatos
+            candidate_elements = self._find_by_any_criteria(parent_element, criteria_for_filtering, timeout, find_all=True)
+
+            if candidate_elements and 0 <= target_typed_index < len(candidate_elements):
+                return candidate_elements[target_typed_index]
+            else:
+                num_candidates = len(candidate_elements) if candidate_elements is not None else 0
+                self.last_execution_report['steps'].append({
+                    'step': 'find_element_typed_index',
+                    'success': False,
+                    'criteria': dict(element_criteria.attrib), # Log original criteria
+                    'error': f'typedIndex {target_typed_index} fora dos limites ou nenhum candidato encontrado ({num_candidates})'
+                })
+                return None
         else:
-            # Busca genérica por qualquer critério disponível
-            return self._find_by_any_criteria(parent_element, criteria, timeout)
+            # Lógica original se typedIndex não estiver presente
+            # As buscas específicas podem ser mais rápidas se não precisarmos de todos os candidatos
+            name_value = criteria_for_filtering.get('name', '') # Use criteria_for_filtering
+
+            if 'automationId' in criteria_for_filtering:
+                return self._find_by_automation_id(parent_element, criteria_for_filtering, timeout)
+
+            elif 'className' in criteria_for_filtering and not name_value:
+                return self._find_by_class_name(parent_element, criteria_for_filtering, timeout)
+
+            elif 'name' in criteria_for_filtering and 'controlType' in criteria_for_filtering and name_value:
+                return self._find_by_name_and_type(parent_element, criteria_for_filtering, timeout)
+
+            elif 'className' in criteria_for_filtering:
+                return self._find_by_class_name(parent_element, criteria_for_filtering, timeout)
+
+            else:
+                # Busca genérica por qualquer critério disponível (retorna o primeiro)
+                return self._find_by_any_criteria(parent_element, criteria_for_filtering, timeout, find_all=False)
     
     def _find_by_automation_id(self, parent, criteria, timeout):
         """
@@ -402,26 +436,51 @@ class XMLSelectorExecutor:
             
         return None
     
-    def _find_by_any_criteria(self, parent, criteria, timeout):
+    def _find_by_any_criteria(self, parent, criteria, timeout, find_all=False):
         """
-        Busca elemento usando qualquer critério disponível
+        Busca elemento(s) usando qualquer critério disponível.
+        Se find_all is True, retorna uma lista de todos os elementos correspondentes.
+        Caso contrário, retorna o primeiro elemento correspondente.
         """
         end_time = time.time() + timeout
+        found_elements = []
         
-        while time.time() < end_time:
+        # Loop de tentativas com timeout
+        current_try_time = time.time()
+        while current_try_time < end_time:
             try:
-                children = parent.GetChildren()
+                children = parent.GetChildren() # Obter filhos dentro do loop de tentativa
                 
+                # Itera sobre os filhos uma vez por tentativa de GetChildren()
+                elements_in_current_pass = []
                 for child in children:
-                    if self._element_matches_criteria(child, criteria):
-                        return child
-                        
-            except Exception:
-                pass
+                    if self._element_matches_criteria(child, criteria.copy()): # Usa copia de criteria
+                        if find_all:
+                            elements_in_current_pass.append(child)
+                        else:
+                            return child # Retorna o primeiro encontrado imediatamente se não for find_all
                 
-            time.sleep(0.1)
+                if find_all:
+                    # Se find_all, acumula os resultados desta passagem e continua buscando até o timeout
+                    # para garantir que todos os elementos que podem aparecer dinamicamente sejam capturados.
+                    # No entanto, para typedIndex, geralmente queremos os elementos presentes em um snapshot.
+                    # Para o caso de typedIndex, a busca é feita uma vez (find_all=true), e o resultado é usado.
+                    # A lógica de timeout aqui é mais para encontrar o *primeiro* elemento se não for find_all.
+                    # Se estamos em modo find_all, e esta é a chamada de _find_element para typedIndex,
+                    # o chamador ( _find_element) vai pegar o resultado e não vai chamar de novo em loop.
+                    # Portanto, retornar elements_in_current_pass aqui é o correto para find_all.
+                    return elements_in_current_pass # Retorna o que foi encontrado nesta passagem
+
+                # Se não é find_all e nada foi retornado no loop de filhos, tenta novamente após pausa
+
+            except Exception:
+                # Ignora erros durante a busca de filhos, pode tentar novamente
+                pass # Permite que o loop de timeout continue
             
-        return None
+            time.sleep(0.1) # Pausa antes da próxima tentativa
+            current_try_time = time.time() # Atualiza o tempo atual para o loop
+
+        return found_elements if find_all else None # Retorna lista vazia ou None após timeout
     
     def _element_matches_criteria(self, element, criteria):
         """
@@ -447,6 +506,16 @@ class XMLSelectorExecutor:
                         return False
                 elif key == 'controlType':
                     if getattr(element, 'ControlTypeName', '') != value:
+                        return False
+                elif key == 'accessibleName':
+                    try:
+                        legacy_pattern = element.GetLegacyIAccessiblePattern()
+                        if legacy_pattern:
+                            if getattr(legacy_pattern, 'Name', '') != value:
+                                return False
+                        else: # Pattern not supported by this element
+                            return False
+                    except Exception: # Error getting pattern or property
                         return False
                         
             return True
